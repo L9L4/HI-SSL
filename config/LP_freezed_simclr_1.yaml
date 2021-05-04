@@ -11,10 +11,10 @@ model:
   # (Optional) on-line learning of a linear classifier on top of teacher
   # features for monitoring purposes.
   num_classes: 24
-  emb_width: 128
+  emb_width: 512
   pretraining: simclr
   mode: freezed
-  cp_path: ../simclr/...
+  cp_path: ../simclr/simclr_1/checkpoints-epoch=029-loss=1.042.ckpt
 
 # Optimization parameters.
 optim:
@@ -23,14 +23,14 @@ optim:
   weight_decay: 0.0001
   nesterov: False
   num_epochs: 30
-  lr: 0.3
+  lr: 0.6
   beta: [0.9, 0.999]
-  end_lr: 0.0003
-  lr_schedule_type: "step_lr"
+  end_lr: 0.0015
+  lr_schedule_type: "cos_warmup"
   step: 10
   gamma: 0.1
   patience: 10
-  warmup_epochs: 5
+  warmup_epochs: 10
   warmup_start_lr: 0.15
   margin: 0.2
 
