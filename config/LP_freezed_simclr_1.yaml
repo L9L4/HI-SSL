@@ -1,0 +1,70 @@
+# General
+general:
+  test_id: "LP_freezed_simclr_1"
+  test_type: TL
+
+# Model parameters.
+model:
+  feature_extractor_arch: "resnet18"
+  bow_extractor_opts:
+    num_words: 8192
+  # (Optional) on-line learning of a linear classifier on top of teacher
+  # features for monitoring purposes.
+  num_classes: 24
+  emb_width: 128
+  pretraining: simclr
+  mode: freezed
+  cp_path: ../simclr/...
+
+# Optimization parameters.
+optim:
+  optim_type: "sgd"
+  momentum: 0.9
+  weight_decay: 0.0001
+  nesterov: False
+  num_epochs: 30
+  lr: 0.3
+  beta: [0.9, 0.999]
+  end_lr: 0.0003
+  lr_schedule_type: "step_lr"
+  step: 10
+  gamma: 0.1
+  patience: 10
+  warmup_epochs: 5
+  warmup_start_lr: 0.15
+  margin: 0.2
+
+# Data parameters:
+data:
+  batch_size: 512
+  transforms:
+    img_crop_size: 380
+    cjitter:
+      'brightness': [0.4, 1.3]
+      'contrast': 0.6 
+      'saturation': 0.6
+      'hue': 0.4
+    cjitter_p: 1
+    randaffine:
+      'degrees': [-10,10]
+      'translate': [0.2, 0.2]
+      'scale': [1.3, 1.4]
+      'shear': 1
+    randpersp:
+      'distortion_scale': 0.1
+      'p': 0.2
+    gray_p: 0.2
+    gaussian_blur:
+      'kernel_size': 3
+      'sigma': [0.1, 0.5]
+    rand_eras:
+      'p': 0.5
+      'scale': [0.02, 0.33]
+      'ratio': [0.3, 3.3]
+      'value': 0
+    invert_p: 0.05
+
+# Test parameters
+test:
+  ratio_train: 20
+  ratio_val: 40
