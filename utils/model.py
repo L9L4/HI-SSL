@@ -69,7 +69,7 @@ def add_fc_layer(type_fc_layer, in_f, out_f):
     return fc_block        
 
 class Model_TL(nn.Module):
-    def __init__(self, pretrained = None, mode = None, arch = 'resnet50', cp_path = './', emb_width = 512, num_fc_layers = 1):
+    def __init__(self, pretrained = None, mode = None, arch = 'resnet50', cp_path = './', emb_width = 512, num_fc_layers = 1, alpha = True, alpha_value = 1.0):
         super().__init__()
         self.pretrained = pretrained
         self.mode = mode
@@ -94,11 +94,13 @@ class Model_TL(nn.Module):
                     new_layer = add_fc_layer('hidden', self.emb_width*(2**(self.num_fc_layers - layer)),
                                                    self.emb_width*(2**(self.num_fc_layers - layer - 1)))
                     self.fc_layers.add_module('fc' + str(layer), new_layer)
+        self.alpha = nn.Parameter(torch.tensor(alpha_value, requires_grad=alpha))
                                        
     def forward(self, x):
         x = self.enc(x)
         x = self.fc_layers(x)
-        return F.normalize(x, p = 2, dim = 1)
+        x = F.normalize(x, p = 2, dim = 1)
+        return self.alpha*x
         # return x
 
 class Model_SN(nn.Module):

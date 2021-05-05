@@ -48,6 +48,8 @@ if __name__ == '__main__':
 	PRETRAINING = args.exp_config['model']['pretraining']
 	MODE = args.exp_config['model']['mode']
 	CP_PATH = args.exp_config['model']['cp_path']
+	ALPHA = args.exp_config['model']['alpha']
+	ALPHA_VALUE = args.exp_config['model']['alpha_value']
 	EPOCHS = args.exp_config['optim']['num_epochs']
 	OPTIM = args.exp_config['optim']
 	img_size = args.exp_config['data']['transforms']['img_crop_size']
@@ -77,7 +79,7 @@ if __name__ == '__main__':
 			trainer = Trainer_MLC(model, t_dl, v_dl, DEVICE, OPTIM, model_path, history_path, test_ID, EPOCHS)
 			trainer()
 		else:
-			model = Model_TL(pretrained = PRETRAINING, mode = MODE, emb_width = EMB_WIDTH, arch = ARCH, cp_path = CP_PATH)
+			model = Model_TL(pretrained = PRETRAINING, mode = MODE, emb_width = EMB_WIDTH, arch = ARCH, cp_path = CP_PATH, alpha = ALPHA, alpha_value = ALPHA_VALUE)
 			model = model.to(DEVICE)
 			save_model(model_path, test_ID, test_type, model)
 			trainer = Trainer_TL(model, tds, vds, t_dl, v_dl, DEVICE, OPTIM, model_path, history_path, test_ID, EPOCHS)
