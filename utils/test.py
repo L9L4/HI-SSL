@@ -189,6 +189,7 @@ class feature_analysis():
 
         df = df.sample(frac=RATIO, replace=False)
         occurrencies = dict(df['Nome'].value_counts())
+        AP_per_class = {key: 0 for key in list(occurrencies.keys())}
         
         APs = []
         for i in tqdm(list(df.index)):
@@ -205,13 +206,17 @@ class feature_analysis():
             backup_df.insert(1, 'Distances', distances)
             backup_df = backup_df.sort_values(by='Distances', ascending=True)
             av_pr = average_precision(label_q, list(backup_df['Nome']), occurrencies[label_q]-1)
+            AP_per_class[label_q] += av_pr
             APs.append(av_pr)
 
         APs = np.array(APs)
         MAP = np.mean(APs)
+        AP_per_class = {key: AP_per_class[key]/occurrencies[key] for key in list(AP_per_class.keys())}
 
         with open(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_Mean_Average_Precision.txt', 'a') as f:
-            f.write(f'Mean Average Precision ({RATIO*100} % of the {self.phase} set) = {round(MAP*100,2)} %\n')
+            f.write(f'Mean Average Precision ({RATIO*100} % of the {self.phase} set) = {round(MAP*100,2)} %\n\n')
+            for key in list(occurrencies.keys()):
+            	f.write(f'Manuscript {key} MAP is {round(AP_per_class[key]*100,2)}, based on {occurrencies[key]} samples\n')
 
     def __call__(self):
         
