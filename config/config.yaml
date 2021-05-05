@@ -35,6 +35,8 @@ optim:
   warmup_epochs: 10
   warmup_start_lr: 0.15
   margin: 0.2
+  alpha_min: 1.0
+  alpha_max: 5.0
 
 # Data parameters:
 data:

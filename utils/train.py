@@ -463,6 +463,10 @@ class Trainer_TL(): #loss based on online_triplet_loss, accuracy calculator from
             else:
                 scheduler.step()
 
+            with torch.no_grad():
+            	if self.model.alpha < 1.0:
+            		self.model.alpha.clamp_(self.optim_params['alpha_min'], self.optim_params['alpha_max'])
+
         sr.save_pkl('train_losses', train_loss)
         sr.save_pkl('val_losses', val_loss)
         sr.save_pkl('train_MAPs', train_accs)
