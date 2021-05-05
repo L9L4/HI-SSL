@@ -162,10 +162,10 @@ class feature_analysis():
             s = 50, cmap = 'hsv', edgecolors='none')
 
         size=81
-        lp = lambda i: plt.plot([],color=sc.cmap(sc.norm(i + 1)), ms=np.sqrt(size), mec='none',
+        lp = lambda i: plt.plot([],color=sc.cmap(sc.norm(i)), ms=np.sqrt(size), mec='none',
             label = list(dict.fromkeys(list(principalDf['Nome'])))[i], ls='', marker='o')[0]
 
-        handles = [lp(i-1) for i in np.unique(principalDf['Categoria'])]
+        handles = [lp(i) for i in np.unique(principalDf['Categoria'])]
         plt.legend(handles=handles)
 
         plt.scatter(centroids_x, centroids_y, c='black', s=50, marker='x')
