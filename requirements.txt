@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # os, random, math, yaml, glob, pickle, copy, pathlib, cv2, sklearn
 numpy==1.19.5
 tqdm==4.44
@@ -15,4 +16,23 @@ pytorch-lightning==1.2.8
 pytorch-lightning-bolts==0.3.2
 lightly==1.1.7
 wandb==0.10.27
+=======
+# os, random, math, yaml, glob, pickle, copy, pathlib, cv2, sklearn
+numpy==1.19.5
+tqdm==4.44
+pandas==1.1.5
+matplotlib==3.2.2
+Pillow==7.1.2
+torch==1.8.1
+torchvision==0.9.1
+argparse==1.1
+pytorch-metric-learning==0.9.98
+faiss-gpu==1.7.0
+online_triplet_loss==0.0.4
+torchtext==0.9
+pytorch-lightning==1.2.8
+pytorch-lightning-bolts==0.3.2
+lightly==1.1.7
+wandb==0.10.27
+>>>>>>> c1033ac4a7985486d2b327c3c899df4035f605b3
 tensorboard==2.4.1
