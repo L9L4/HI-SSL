@@ -90,7 +90,7 @@ class feature_analysis():
 
         self.model.eval()
         
-        dl = Standard_DataLoader(self.data_dir, self.transforms, self.batch_size, False, self.mean_, self.std_, True)
+        dl = Standard_DataLoader(self.data_dir, self.transforms, self.batch_size, False, False, self.mean_, self.std_, True)
         dataset = dl.generate_dataset()
         _, set_ = dl.load_data()
 

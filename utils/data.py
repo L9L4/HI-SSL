@@ -2,7 +2,8 @@ import os, torch, cv2, random, math, glob
 from tqdm import tqdm
 import numpy as np
 from PIL import Image
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import Dataset, DataLoader
+from torch.utils.data.sampler import WeightedRandomSampler
 import torchvision.datasets as datasets
 import torchvision.transforms as T
 import torchvision.transforms.functional as F
@@ -55,12 +56,13 @@ class Invert(object):
 
 class Standard_DataLoader():
 	
-	def __init__(self, directory, transforms_params, batch_size, train = True, mean = [0, 0, 0], std = [1, 1, 1],
+	def __init__(self, directory, transforms_params, batch_size, weighted_sampling = True, train = True, mean = [0, 0, 0], std = [1, 1, 1],
 		shuffle = True, amount = 0.3, selection = False):
 
 		self.directory = directory
 		self.transforms_params = transforms_params
 		self.batch_size = batch_size
+		self.weighted_sampling = weighted_sampling
 		self.train = train
 		self.shuffle = shuffle
 		self.amount = amount
@@ -70,6 +72,19 @@ class Standard_DataLoader():
 		else:
 			self.mean = mean
 			self.std = std
+
+	def make_weights_for_balanced_classes(self, images, nclasses): # https://discuss.pytorch.org/t/balanced-sampling-between-classes-with-torchvision-dataloader/2703/3
+		count = [0] * nclasses                                                      
+		for item in images:
+			count[item[1]] += 1
+		weight_per_class = [0.] * nclasses
+		N = float(sum(count))
+		for i in range(nclasses):
+			weight_per_class[i] = N/float(count[i])
+		weight = [0] * len(images)
+		for idx, val in enumerate(images):
+			weight[idx] = weight_per_class[val[1]]
+		return weight    
 
 	def compose_transform(self, 
 		img_crop_size = 380, 
@@ -116,7 +131,14 @@ class Standard_DataLoader():
 
 	def load_data(self):
 		dataset = self.generate_dataset()
-		loader = DataLoader(dataset, batch_size = self.batch_size, shuffle = self.shuffle)
+		if self.train:
+			if self.weighted_sampling:
+				weights = self.make_weights_for_balanced_classes(dataset.imgs, len(dataset.classes))
+				weights = torch.DoubleTensor(weights)
+				sampler = WeightedRandomSampler(weights, len(weights))
+				loader = DataLoader(dataset, batch_size = self.batch_size, shuffle = self.shuffle, sampler = sampler)
+		else:
+			loader = DataLoader(dataset, batch_size = self.batch_size, shuffle = self.shuffle)
 		return dataset, loader 
 
 class Dataset_Generator_SN(Dataset):

@@ -67,6 +67,7 @@ data:
       'ratio': [0.3, 3.3]
       'value': 0
     invert_p: 0.05
+  weighted_sampling: True
 
 # Test parameters
 test:

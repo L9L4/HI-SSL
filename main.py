@@ -55,6 +55,7 @@ if __name__ == '__main__':
 	img_size = args.exp_config['data']['transforms']['img_crop_size']
 	TRANSFORMS = args.exp_config['data']['transforms']
 	BATCH_SIZE = args.exp_config['data']['batch_size']
+	WS = args.exp_config['data']['weighted_sampling']
 
 	assert test_type in ['MLC', 'TL', 'SN'], 'Set test type either to "MLC", "TL" or "SN"'
 
@@ -67,8 +68,8 @@ if __name__ == '__main__':
 	mean_, std_ = load_rgb_mean_std(args.T_IM_DIR)
 
 	if test_type in ['MLC', 'TL']:
-		t_ds = Standard_DataLoader(args.T_IM_DIR, TRANSFORMS, BATCH_SIZE, True, mean_, std_, True)
-		v_ds = Standard_DataLoader(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, mean_, std_, True)
+		t_ds = Standard_DataLoader(args.T_IM_DIR, TRANSFORMS, BATCH_SIZE, WS, True, mean_, std_, True)
+		v_ds = Standard_DataLoader(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, False, mean_, std_, True)
 		tds, t_dl = t_ds.load_data()
 		vds, v_dl = v_ds.load_data()
 		if test_type == 'MLC':
