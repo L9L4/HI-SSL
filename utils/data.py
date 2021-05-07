@@ -136,7 +136,7 @@ class Standard_DataLoader():
 				weights = self.make_weights_for_balanced_classes(dataset.imgs, len(dataset.classes))
 				weights = torch.DoubleTensor(weights)
 				sampler = WeightedRandomSampler(weights, len(weights))
-				loader = DataLoader(dataset, batch_size = self.batch_size, shuffle = self.shuffle, sampler = sampler)
+				loader = DataLoader(dataset, batch_size = self.batch_size, sampler = sampler)
 		else:
 			loader = DataLoader(dataset, batch_size = self.batch_size, shuffle = self.shuffle)
 		return dataset, loader 
