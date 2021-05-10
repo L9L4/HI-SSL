@@ -2,6 +2,7 @@
 general:
   test_id: "LP_freezed_simclr_1"
   test_type: TL
+  seed: 1
 
 # Model parameters.
 model:

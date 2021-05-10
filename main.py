@@ -5,6 +5,7 @@ from torch.utils import *
 from utils.torch_utils import *
 import torch, yaml, pathlib
 from argparse import ArgumentParser 
+import pytorch_lightning as pl
 
 def get_args():
   parser = ArgumentParser(description = 'Hyperparameters', add_help = True)
@@ -56,6 +57,7 @@ if __name__ == '__main__':
 	TRANSFORMS = args.exp_config['data']['transforms']
 	BATCH_SIZE = args.exp_config['data']['batch_size']
 	WS = args.exp_config['data']['weighted_sampling']
+	SEED = args.exp_config['general']['seed']
 
 	assert test_type in ['MLC', 'TL', 'SN'], 'Set test type either to "MLC", "TL" or "SN"'
 
@@ -72,6 +74,7 @@ if __name__ == '__main__':
 		v_ds = Standard_DataLoader(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, False, mean_, std_, True)
 		tds, t_dl = t_ds.load_data()
 		vds, v_dl = v_ds.load_data()
+		pl.seed_everything(SEED)
 		if test_type == 'MLC':
 			assert NUM_CLASSES == len(t_dl.dataset.classes), f'Wrong number of classes: ({len(t_dl.dataset.classes)} classes in dataset).\n'
 			model = Model_MLC(pretrained = PRETRAINING, mode = MODE, emb_width = EMB_WIDTH, arch = ARCH, cp_path = CP_PATH, num_classes = NUM_CLASSES)
@@ -90,6 +93,7 @@ if __name__ == '__main__':
 		v_ds = Data_Loader_SN(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, mean_, std_)
 		t_dl = t_ds.load_data()
 		v_dl = v_ds.load_data()
+		pl.seed_everything(SEED)
 		model = Model_SN(pretrained = PRETRAINING, mode = MODE, emb_width = EMB_WIDTH, arch = ARCH, cp_path = CP_PATH)
 		model = model.to(DEVICE)
 		save_model(model_path, test_ID, test_type, model)
