@@ -54,6 +54,19 @@ class Invert(object):
         str_transforms = f"Invert RGB channels"
         return str_transforms
 
+class AddGaussianNoise(object):
+    def __init__(self, mean=0., std=1.):
+        self.std = std
+        self.mean = mean
+        
+    def __call__(self, tensor):
+        randn_tensor = torch.randn(1, tensor.size()[1], tensor.size()[2])
+        randn_tensor = randn_tensor.repeat(3,1,1)
+        return tensor + randn_tensor * self.std + self.mean
+    
+    def __repr__(self):
+        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+
 class Standard_DataLoader():
 	
 	def __init__(self, directory, transforms_params, batch_size, weighted_sampling = True, train = True, mean = [0, 0, 0], std = [1, 1, 1],
@@ -93,9 +106,11 @@ class Standard_DataLoader():
 		randaffine = {'degrees': [-10,10], 'translate': [0.2, 0.2], 'scale': [1.3, 1.4], 'shear': 1}, 
 		randpersp = {'distortion_scale': 0.1, 'p': 0.2}, 
 		gray_p = 0.2, 
-		gaussian_blur= {'kernel_size': 3, 'sigma': [0.1, 0.5]},
+		gaussian_blur = {'kernel_size': 3, 'sigma': [0.1, 0.5]},
 		rand_eras = {'p': 0.5, 'scale': [0.02, 0.33], 'ratio': [0.3, 3.3], 'value': 0}, 
-		invert_p = 0.05):
+		invert_p = 0.05,
+		gaussian_noise = {'mean': 0., 'std': 0.004},
+		gn_p = 0.0):
 		
 
 		randaffine['interpolation'] = randpersp['interpolation'] = T.InterpolationMode.BILINEAR
@@ -111,7 +126,8 @@ class Standard_DataLoader():
 			T.ToTensor(),
 			T.RandomErasing(**rand_eras),
 			T.RandomApply([Invert()], p=invert_p),
-			T.Normalize(self.mean, self.std)
+			T.Normalize(self.mean, self.std),
+			T.RandomApply([AddGaussianNoise(**gaussian_noise)], p=gn_p)
 			])	
 
 		val_transforms = T.Compose([
@@ -179,7 +195,9 @@ class Dataset_Generator_SN(Dataset):
 		gray_p = 0.2, 
 		gaussian_blur= {'kernel_size': 3, 'sigma': [0.1, 0.5]},
 		rand_eras = {'p': 0.5, 'scale': [0.02, 0.33], 'ratio': [0.3, 3.3], 'value': 0}, 
-		invert_p = 0.05):
+		invert_p = 0.05,
+		gaussian_noise = {'mean': 0., 'std': 0.004},
+		gn_p = 0.0):
 		
 
 		randaffine['interpolation'] = randpersp['interpolation'] = T.InterpolationMode.BILINEAR
@@ -195,7 +213,8 @@ class Dataset_Generator_SN(Dataset):
 			T.ToTensor(),
 			T.RandomErasing(**rand_eras),
 			T.RandomApply([Invert()], p=invert_p),
-			T.Normalize(self.mean, self.std)
+			T.Normalize(self.mean, self.std),
+			T.RandomApply([AddGaussianNoise(**gaussian_noise)], p=gn_p)
 			])	
 
 		val_transforms = T.Compose([

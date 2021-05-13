@@ -1,6 +1,6 @@
 # General
 general:
-  test_id: "LP_freezed_simclr_1"
+  test_id: "---"
   test_type: TL
   seed: 1
 
@@ -9,8 +9,6 @@ model:
   feature_extractor_arch: "resnet18"
   bow_extractor_opts:
     num_words: 8192
-  # (Optional) on-line learning of a linear classifier on top of teacher
-  # features for monitoring purposes.
   num_classes: 24
   emb_width: 512
   pretraining: simclr
@@ -68,6 +66,10 @@ data:
       'ratio': [0.3, 3.3]
       'value': 0
     invert_p: 0.05
+    gaussian_noise:
+      'mean': 0.0
+      'std': 0.004
+    gn_p: 0.0
   weighted_sampling: True
 
 # Test parameters
