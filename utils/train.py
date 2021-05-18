@@ -15,6 +15,7 @@ class BHTL(object):
 		self.device = device
 
 	def __call__(self, output, target):
+		from online_triplet_loss.losses import batch_hard_triplet_loss
 		loss = batch_hard_triplet_loss(target, output, squared = self.squared, margin = self.margin, device = self.device)
 		return loss
 
@@ -76,20 +77,22 @@ def set_metric_learning_loss(optim_params, device):
 	
 	accuracy_calculator = AccuracyCalculator()
 
-	if optim_params['loss'] == 'bhtl':
-
-		from online_triplet_loss.losses import batch_hard_triplet_loss
+	if optim_params['loss']['loss_type'] == 'bhtl':
 		loss_func = BHTL(optim_params['loss']['squared'], optim_params['loss']['margin'], device)
 		mining = None
 	
-	elif optim_params['loss'].split('_')[0] == 'pml':
+	elif optim_params['loss']['loss_type'].split('_')[0] == 'pml':
 		from pytorch_metric_learning import losses, miners, distances, reducers
-		if optim_params['loss'] == 'pml_bhtl':
-			distance = distances.__dict__[optim_params['loss']['distance']](collect_stats = True, 
-				normalize_embeddings = optim_params['loss']['normalize_embedding'], 
-				p = optim_params['loss']['p'], 
-				power = optim_params['loss']['power'], 
-				is_inverted = False)
+		if optim_params['loss']['loss_type'] == 'pml_bhtl':
+			if optim_params['loss']['distance'] == 'LpDistance':
+				distance = distances.__dict__[optim_params['loss']['distance']](collect_stats = True, 
+					normalize_embeddings = optim_params['loss']['normalize_embedding'], 
+					p = optim_params['loss']['p'], 
+					power = optim_params['loss']['power'], 
+					is_inverted = False)
+			elif optim_params['loss']['distance'] == 'DotProductSimilarity':
+				distance = distances.__dict__[optim_params['loss']['distance']](collect_stats = True,
+					normalize_embeddings = optim_params['loss']['normalize_embedding'],)
 			reducer = reducers.AvgNonZeroReducer(collect_stats = True)
 			loss_func = losses.TripletMarginLoss(margin = optim_params['loss']['margin'], distance = distance, reducer = reducer)
 			mining = miners.TripletMarginMiner(collect_stats = True, 
@@ -234,92 +237,92 @@ class Trainer_TL():
         return accuracies["mean_average_precision"]
 
     def train_model(self):
-
     	loss_func, mining, accuracy_calculator = set_metric_learning_loss(self.optim_params, self.DEVICE)
 
-        optimizer = set_optimizer(self.optim_params, self.model)
-        scheduler = set_scheduler(self.optim_params, optimizer)
+    	optimizer = set_optimizer(self.optim_params, self.model)
+    	scheduler = set_scheduler(self.optim_params, optimizer)
 
-        sr = save_results(self.history_path, self.checkpoint_path, self.test_name)
-        
-        self.model.train()
-        
-        train_loss = []
-        val_loss = []
-        train_accs = []
-        val_accs = []              
-        min_loss_t = 1000.0
-        min_loss_v = 1000.0        
+    	sr = save_results(self.history_path, self.checkpoint_path, self.test_name)
 
-        for epoch in range(1, self.num_epochs + 1):
-            print(f'Epoch {epoch} / {self.num_epochs}')
-            self.model.train()
-            epoch_loss = 0.0
-            for data, target in tqdm(self.t_dl, 'Training'):
-                data = data.to(self.DEVICE)
-                target = target.to(self.DEVICE)
-                optimizer.zero_grad()
-                output = self.model(data)
-                
-                if optim_params['loss'].split('_')[0] == 'pml':
-                	indices_tuple = mining(output, target)
-                	loss = loss_func(output, target, indices_tuple)
-                else:
-                	loss = loss_func(output, target)
+    	self.model.train()
 
-                epoch_loss += float(loss.item())*len(data)
-                loss.backward()
-                optimizer.step()
+    	train_loss = []
+    	val_loss = []
+    	train_accs = []
+    	val_accs = []
+    	min_loss_t = 1000.0
+    	min_loss_v = 1000.0
 
-            epoch_loss /= len(self.t_dl.dataset)
-            print(f'train_loss: {epoch_loss}')
-            print()
-            train_loss.append(epoch_loss)
+    	for epoch in range(1, self.num_epochs + 1):
+    		print(f'Epoch {epoch} / {self.num_epochs}')
+    		self.model.train()
+    		epoch_loss = 0.0
+    		for data, target in tqdm(self.t_dl, 'Training'):
+    			data = data.to(self.DEVICE)
+    			target = target.to(self.DEVICE)
+    			optimizer.zero_grad()
+    			output = self.model(data)
 
-            min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'training_loss')
+    			if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
+    				indices_tuple = mining(output, target)
+    				loss = loss_func(output, target, indices_tuple)
 
-            epoch_val_loss = 0.0
-            optimizer.zero_grad()
-            self.model.eval()
-            for data, target in tqdm(self.v_dl, 'Validation'):
-                data = data.to(self.DEVICE)
-                target = target.to(self.DEVICE)
-                with torch.no_grad():
-                    output_val = self.model(data)
-                
-                if optim_params['loss'].split('_')[0] == 'pml':
-                	indices_tuple_val = mining(output_val, target)
-                	validation_loss = loss_func(output_val, target, indices_tuple_val)
-                else:
-                	validation_loss = loss_func(output_val, target)
-                                  
-                epoch_val_loss += validation_loss.item()*len(data)
-            
-            epoch_val_loss /= len(self.v_dl.dataset)
-            print(f'val_loss: {epoch_val_loss}')
-            print()
-            val_loss.append(epoch_val_loss)
+    			else:
+    				loss = loss_func(output, target)
 
-            min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'validation_loss')
+    			epoch_loss += float(loss.item())*len(data)
+    			loss.backward()
+    			optimizer.step()
 
-            train_acc = self.test("Training", self.tds, self.model, accuracy_calculator)
-            train_accs.append(train_acc)
-            val_acc = self.test("Validation", self.vds, self.model, accuracy_calculator)
-            val_accs.append(val_acc)
-            
-            if self.optim_params['lr_schedule_type'] == 'red_on_plateau':
-                scheduler.step(epoch_val_loss)
-            else:
-                scheduler.step()
+    		epoch_loss /= len(self.t_dl.dataset)
+    		print(f'train_loss: {epoch_loss}')
+    		print()
+    		train_loss.append(epoch_loss)
 
-            with torch.no_grad():
-            	if self.model.alpha < 1.0:
-            		self.model.alpha.clamp_(self.optim_params['alpha_min'], self.optim_params['alpha_max'])
+    		min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'training_loss')
 
-            sr.save_pkl('train_losses', train_loss)
-            sr.save_pkl('val_losses', val_loss)
-            sr.save_pkl('train_MAPs', train_accs)
-            sr.save_pkl('val_MAPs', val_accs)
+    		epoch_val_loss = 0.0
+    		optimizer.zero_grad()
+    		self.model.eval()
+    		for data, target in tqdm(self.v_dl, 'Validation'):
+    			data = data.to(self.DEVICE)
+    			target = target.to(self.DEVICE)
+    			with torch.no_grad():
+    				output_val = self.model(data)
+
+    			if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
+    				indices_tuple_val = mining(output_val, target)
+    				validation_loss = loss_func(output_val, target, indices_tuple_val)
+    			else:
+    				validation_loss = loss_func(output_val, target)
+
+    			epoch_val_loss += validation_loss.item()*len(data)
+
+    		epoch_val_loss /= len(self.v_dl.dataset)
+    		print(f'val_loss: {epoch_val_loss}')
+    		print()
+    		val_loss.append(epoch_val_loss)
+
+    		min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'validation_loss')
+
+    		train_acc = self.test("Training", self.tds, self.model, accuracy_calculator)
+    		train_accs.append(train_acc)
+    		val_acc = self.test("Validation", self.vds, self.model, accuracy_calculator)
+    		val_accs.append(val_acc)
+
+    		if self.optim_params['lr_schedule_type'] == 'red_on_plateau':
+    			scheduler.step(epoch_val_loss)
+    		else:
+    			scheduler.step()
+
+    		with torch.no_grad():
+    			if self.model.alpha < 1.0:
+    				self.model.alpha.clamp_(self.optim_params['alpha_min'], self.optim_params['alpha_max'])
+
+    		sr.save_pkl('train_losses', train_loss)
+    		sr.save_pkl('val_losses', val_loss)
+    		sr.save_pkl('train_MAPs', train_accs)
+    		sr.save_pkl('val_MAPs', val_accs)
 
     def __call__(self):
         self.train_model()
