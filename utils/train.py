@@ -6,16 +6,17 @@ from tqdm import tqdm
 import torch.optim as optim
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 
-class BHTL(object): # Batch Hard Triplet Loss (online_triplet_loss)
+# Batch Hard Triplet Loss (online_triplet_loss)
+class BHTL(object): 
 
 	def __init__(self, squared, margin, device):
 		self.squared = squared
 		self.margin = margin
 		self.device = device
 
-    def __call__(self, output, target):
-    	loss = batch_hard_triplet_loss(target, output, squared = self.squared, margin = self.margin, device = self.device)
-    	return loss
+	def __call__(self, output, target):
+		loss = batch_hard_triplet_loss(target, output, squared = self.squared, margin = self.margin, device = self.device)
+		return loss
 
 class save_results():
     def __init__(self, history_path, checkpoint_path, test_name):
