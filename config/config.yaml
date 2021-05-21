@@ -44,6 +44,7 @@ optim:
     normalize_embedding: True
     p: 2
     power: 1
+    ia_c_var_min: True
 
 # Data parameters:
 data:

@@ -6,6 +6,27 @@ from tqdm import tqdm
 import torch.optim as optim
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 
+# Intra-Class Variance Minimization Loss
+class IaCVM(object):
+	def __init__(self, first_loss):
+		self.first_loss = first_loss
+
+	def IaCVM_func(self, samples, labels):
+		weight = torch.zeros(labels.max()+1, samples.shape[0]).to(samples.device)
+		weight[labels, torch.arange(samples.shape[0]).unsqueeze(0)] = 1
+		embeddings_per_class = torch.mul(weight.unsqueeze(2),samples.unsqueeze(0))
+		var = torch.stack([torch.sum(torch.var(embeddings_per_class[i][embeddings_per_class[i].nonzero(as_tuple=True)].view(-1, embeddings_per_class[i].shape[1]), 
+			dim = 0)) for i in range(embeddings_per_class.shape[0])])
+
+		label_freq = torch.bincount(labels)
+		label_freq[label_freq == 1] = 0
+
+		mean_variance = torch.matmul(label_freq.type(torch.FloatTensor), torch.nan_to_num(var, nan=0.0))/torch.sum(label_freq.type(torch.FloatTensor))
+		return mean_variance
+
+	def __call__(self, samples, labels):
+		return self.first_loss(samples, labels) + self.IaCVM_func(samples, labels)
+
 # Batch Hard Triplet Loss (online_triplet_loss)
 class BHTL(object): 
 
@@ -94,11 +115,14 @@ def set_metric_learning_loss(optim_params, device):
 				distance = distances.__dict__[optim_params['loss']['distance']](collect_stats = True,
 					normalize_embeddings = optim_params['loss']['normalize_embedding'],)
 			reducer = reducers.AvgNonZeroReducer(collect_stats = True)
-			loss_func = losses.TripletMarginLoss(margin = optim_params['loss']['margin'], distance = distance, reducer = reducer)
+			loss_func = losses.TripletMarginLoss(margin = optim_params['loss']['margin'], distance = distance, reducer = reducer) + optim_params['loss']['ia_c_var_min']*IaCVM()
 			mining = miners.TripletMarginMiner(collect_stats = True, 
 				margin = optim_params['loss']['margin'], 
 				distance = distance, 
 				type_of_triplets = optim_params['loss']['mining'])
+
+	if optim_params['loss']['ia_c_var_min']:
+			loss_func = IaCVM(loss_func)
 
 	return loss_func, mining, accuracy_calculator
 
