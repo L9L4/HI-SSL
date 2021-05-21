@@ -90,7 +90,7 @@ class feature_analysis():
 
         self.model.eval()
         
-        dl = Standard_DataLoader(self.data_dir, self.transforms, self.batch_size, False, False, self.mean_, self.std_, True)
+        dl = Standard_DataLoader(self.data_dir, self.transforms, 32, False, 'test', self.mean_, self.std_, True)
         dataset = dl.generate_dataset()
         _, set_ = dl.load_data()
 
@@ -102,8 +102,10 @@ class feature_analysis():
 
         for data, target in tqdm(set_):
             data = data.to(self.device)
+            bs, ncrops, c, h, w = data.size()
             with torch.no_grad():
-                output = self.model(data)
+                output = self.model(data.view(-1, c, h, w))
+                output = output.view(bs, ncrops, -1).mean(1) 
                 output = output.cpu().detach().numpy()
             for item_ in range(output.shape[0]):
                 dict_aut[target[item_].item()].append(output[item_])

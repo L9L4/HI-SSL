@@ -44,6 +44,9 @@ optim:
     normalize_embedding: True
     p: 2
     power: 1
+    scale: 64
+    num_classes: 24 # same as num_classes in model parameters
+    loss_lr: 0.01	
     ia_c_var_min: True
 
 # Data parameters:
@@ -79,6 +82,7 @@ data:
       'mean': 0.0
       'std': 0.004
     gn_p: 0.0
+    n_test_crops: 10
   weighted_sampling: True
 
 # Test parameters

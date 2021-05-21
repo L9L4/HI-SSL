@@ -70,8 +70,8 @@ if __name__ == '__main__':
 	mean_, std_ = load_rgb_mean_std(args.T_IM_DIR)
 
 	if test_type in ['MLC', 'TL']:
-		t_ds = Standard_DataLoader(args.T_IM_DIR, TRANSFORMS, BATCH_SIZE, WS, True, mean_, std_, True)
-		v_ds = Standard_DataLoader(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, False, mean_, std_, True)
+		t_ds = Standard_DataLoader(args.T_IM_DIR, TRANSFORMS, BATCH_SIZE, WS, 'train', mean_, std_, True)
+		v_ds = Standard_DataLoader(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, 'val', mean_, std_, True)
 		tds, t_dl = t_ds.load_data()
 		vds, v_dl = v_ds.load_data()
 		pl.seed_everything(SEED)

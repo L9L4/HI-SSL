@@ -1,4 +1,4 @@
-import os, torch, cv2, random, math, glob
+import os, torch, cv2, random, math, glob, numbers
 from tqdm import tqdm
 import numpy as np
 from PIL import Image
@@ -67,16 +67,65 @@ class AddGaussianNoise(object):
     def __repr__(self):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
+# https://gist.github.com/amirhfarzaneh/66251288d07c67f6cfd23efc3c1143ad
+class NRandomCrop(object):
+
+	def __init__(self, size, n=1, padding=0, pad_if_needed=False):
+		if isinstance(size, numbers.Number):
+			self.size = (int(size), int(size))
+		else:
+			self.size = size
+		self.padding = padding
+		self.pad_if_needed = pad_if_needed
+		self.n = n
+
+	@staticmethod
+	def get_params(img, output_size, n):
+		w, h = img.size
+		th, tw = output_size
+		if w == tw and h == th:
+			return 0, 0, h, w
+
+		i_list = [random.randint(0, h - th) for i in range(n)]
+		j_list = [random.randint(0, w - tw) for i in range(n)]
+		return i_list, j_list, th, tw
+
+	def __call__(self, img):
+		
+		if self.padding > 0:
+			img = F.pad(img, self.padding)
+
+		if self.pad_if_needed and img.size[0] < self.size[1]:
+			img = F.pad(img, (int((1 + self.size[1] - img.size[0]) / 2), 0))
+
+		if self.pad_if_needed and img.size[1] < self.size[0]:
+			img = F.pad(img, (0, int((1 + self.size[0] - img.size[1]) / 2)))
+
+		i, j, h, w = self.get_params(img, self.size, self.n)
+
+		return n_random_crops(img, i, j, h, w)
+
+	def __repr__(self):
+		return self.__class__.__name__ + '(size={0}, padding={1})'.format(self.size, self.padding)
+
+def n_random_crops(img, x, y, h, w):
+
+	crops = []
+	for i in range(len(x)):
+		new_crop = img.crop((y[i], x[i], y[i] + w, x[i] + h))
+		crops.append(new_crop)
+	return tuple(crops)
+
 class Standard_DataLoader():
 	
-	def __init__(self, directory, transforms_params, batch_size, weighted_sampling = True, train = True, mean = [0, 0, 0], std = [1, 1, 1],
+	def __init__(self, directory, transforms_params, batch_size, weighted_sampling = True, phase = 'train', mean = [0, 0, 0], std = [1, 1, 1],
 		shuffle = True, amount = 0.3, selection = False):
 
 		self.directory = directory
 		self.transforms_params = transforms_params
 		self.batch_size = batch_size
 		self.weighted_sampling = weighted_sampling
-		self.train = train
+		self.phase = phase
 		self.shuffle = shuffle
 		self.amount = amount
 		self.selection = selection
@@ -110,7 +159,8 @@ class Standard_DataLoader():
 		rand_eras = {'p': 0.5, 'scale': [0.02, 0.33], 'ratio': [0.3, 3.3], 'value': 0}, 
 		invert_p = 0.05,
 		gaussian_noise = {'mean': 0., 'std': 0.004},
-		gn_p = 0.0):
+		gn_p = 0.0,
+		n_test_crops = 10):
 		
 
 		randaffine['interpolation'] = randpersp['interpolation'] = T.InterpolationMode.BILINEAR
@@ -135,11 +185,18 @@ class Standard_DataLoader():
 			T.ToTensor(),
 			T.Normalize(self.mean, self.std)
 			])
+
+		test_transforms = T.Compose([
+			NRandomCrop(size = img_crop_size, n = n_test_crops, pad_if_needed = True),
+			T.Lambda(lambda crops: torch.stack([T.Normalize(self.mean, self.std)(T.ToTensor()(crop)) for crop in crops]))
+			])
 		
-		if self.train == True:
+		if self.phase == 'train':
 			return train_transforms			
-		else:
+		elif self.phase == 'val':
 			return val_transforms
+		elif self.phase == 'test':
+			return test_transforms
 
 	def generate_dataset(self):
 		return datasets.ImageFolder(root = self.directory, 
@@ -147,7 +204,7 @@ class Standard_DataLoader():
 
 	def load_data(self):
 		dataset = self.generate_dataset()
-		if self.train:
+		if self.phase == 'train':
 			if self.weighted_sampling:
 				weights = self.make_weights_for_balanced_classes(dataset.imgs, len(dataset.classes))
 				weights = torch.DoubleTensor(weights)
