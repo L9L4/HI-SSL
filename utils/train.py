@@ -20,8 +20,9 @@ class IaCVM(object):
 
 		label_freq = torch.bincount(labels)
 		label_freq[label_freq == 1] = 0
-
-		mean_variance = torch.matmul(label_freq.type(torch.FloatTensor), torch.nan_to_num(var, nan=0.0))/torch.sum(label_freq.type(torch.FloatTensor))
+		label_freq = label_freq.type(torch.FloatTensor).to(samples.device)
+        
+		mean_variance = torch.matmul(label_freq, torch.nan_to_num(var, nan=0.0))/torch.sum(label_freq)
 		return mean_variance
 
 	def __call__(self, samples, labels):
