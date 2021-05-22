@@ -44,9 +44,6 @@ optim:
     normalize_embedding: True
     p: 2
     power: 1
-    scale: 64
-    num_classes: 24 # same as num_classes in model parameters
-    loss_lr: 0.01	
     ia_c_var_min: True
 
 # Data parameters:

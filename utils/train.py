@@ -94,7 +94,7 @@ def set_scheduler(optim_params, optimizer):
         raise Exception('The selected scheduler type is not available.')
     return scheduler
 
-def set_metric_learning_loss(optim_params, device, emb_width):
+def set_metric_learning_loss(optim_params, device):
 	from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
 	
 	accuracy_calculator = AccuracyCalculator()
@@ -117,9 +117,6 @@ def set_metric_learning_loss(optim_params, device, emb_width):
 					normalize_embeddings = optim_params['loss']['normalize_embedding'],)
 			reducer = reducers.AvgNonZeroReducer(collect_stats = True)
 			loss_func = losses.TripletMarginLoss(margin = optim_params['loss']['margin'], distance = distance, reducer = reducer)
-		elif optim_params['loss']['loss_type'] == 'pml_cosface':
-			distance = distances.CosineSimilarity()
-			loss_func = losses.CosFaceLoss(optim_params['loss']['num_classes'], emb_width, margin = optim_params['loss']['margin'], scale = optim_params['loss']['scale'])
 
 		mining = miners.TripletMarginMiner(collect_stats = True,
 			margin = optim_params['loss']['margin'],
@@ -266,11 +263,7 @@ class Trainer_TL():
         return accuracies["mean_average_precision"]
 
     def train_model(self):
-    	loss_func, mining, accuracy_calculator = set_metric_learning_loss(self.optim_params, self.DEVICE, self.model.emb_width)
-    	
-    	if self.optim_params['loss']['loss_type'] == 'pml_cosface':
-    		loss_func = loss_func.to(self.DEVICE)
-    		loss_optimizer = optim.SGD(loss_func.parameters(), lr=self.optim_params['loss']['loss_lr'])
+    	loss_func, mining, accuracy_calculator = set_metric_learning_loss(self.optim_params, self.DEVICE)
 
     	optimizer = set_optimizer(self.optim_params, self.model)
     	scheduler = set_scheduler(self.optim_params, optimizer)
@@ -306,8 +299,6 @@ class Trainer_TL():
     			epoch_loss += float(loss.item())*len(data)
     			loss.backward()
     			optimizer.step()
-    			if self.optim_params['loss']['loss_type'] == 'pml_cosface':
-    				loss_optimizer.step()
 
     		epoch_loss /= len(self.t_dl.dataset)
     		print(f'train_loss: {epoch_loss}')
@@ -326,11 +317,8 @@ class Trainer_TL():
     				output_val = self.model(data)
 
     			if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
-    				if self.optim_params['loss']['loss_type'].split('_')[1] == 'cosface':
-    					validation_loss = torch.tensor(0)
-    				else:
-    					indices_tuple_val = mining(output_val, target)
-    					validation_loss = loss_func(output_val, target, indices_tuple_val)
+    				indices_tuple_val = mining(output_val, target)
+    				validation_loss = loss_func(output_val, target, indices_tuple_val)
     			else:
     				validation_loss = loss_func(output_val, target)
 
