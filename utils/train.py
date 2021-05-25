@@ -8,8 +8,9 @@ from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 
 # Intra-Class Variance Minimization Loss
 class IaCVM(object):
-	def __init__(self, first_loss):
+	def __init__(self, first_loss, magnitude):
 		self.first_loss = first_loss
+		self.magnitude = magnitude
 
 	def IaCVM_func(self, samples, labels):
 		weight = torch.zeros(labels.max()+1, samples.shape[0]).to(samples.device)
@@ -26,7 +27,13 @@ class IaCVM(object):
 		return mean_variance
 
 	def __call__(self, samples, labels):
-		return self.first_loss(samples, labels) + self.IaCVM_func(samples, labels)
+		FL = self.first_loss(samples, labels)
+		SL = self.IaCVM_func(samples, labels)
+
+		RATIO = 100*SL/(FL + SL)
+
+		print(f'\nRatio between Intra-Class Variance Minimization Loss and overall loss: {round(RATIO.item(), 1)} %\n')
+		return FL + SL*self.magnitude
 
 # Batch Hard Triplet Loss (online_triplet_loss)
 class BHTL(object): 
@@ -124,7 +131,7 @@ def set_metric_learning_loss(optim_params, device):
 			type_of_triplets = optim_params['loss']['mining'])
 
 	if optim_params['loss']['ia_c_var_min']:
-			loss_func = IaCVM(loss_func)
+			loss_func = IaCVM(loss_func, optim_params['loss']['iacvm_magnitude'])
 
 	return loss_func, mining, accuracy_calculator
 
