@@ -1,0 +1,17 @@
+# os, random, math, yaml, glob, pickle, copy, pathlib, cv2, sklearn
+# pytorch-metric-learning==0.9.98
+# faiss-gpu==1.7.0
+# pandas==1.1.5
+numpy==1.19.5
+tqdm==4.44.0
+matplotlib==3.2.2
+Pillow==7.1.2
+torch==1.8.1
+torchvision==0.9.1
+torchtext==0.9
+argparse==1.1
+pytorch-lightning==1.2.8
+pytorch-lightning-bolts==0.3.2
+lightly==1.1.7
+wandb==0.10.27
+tensorboard==2.4.1
