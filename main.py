@@ -89,8 +89,8 @@ if __name__ == '__main__':
 			trainer = Trainer_TL(model, tds, vds, t_dl, v_dl, DEVICE, OPTIM, model_path, history_path, test_ID, EPOCHS)
 			trainer()
 	else:
-		t_ds = Data_Loader_SN(args.T_IM_DIR, TRANSFORMS, BATCH_SIZE, True, mean_, std_)
-		v_ds = Data_Loader_SN(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, mean_, std_)
+		t_ds = Data_Loader_SN(args.T_IM_DIR, TRANSFORMS, BATCH_SIZE, WS, 'train', mean_, std_)
+		v_ds = Data_Loader_SN(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, 'val', mean_, std_)
 		t_dl = t_ds.load_data()
 		v_dl = v_ds.load_data()
 		pl.seed_everything(SEED)

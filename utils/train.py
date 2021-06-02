@@ -411,7 +411,7 @@ class Trainer_SN():
 
                 BCE_loss = BCELoss()
                 loss = BCE_loss(output, target.detach())
-                epoch_loss += float(loss.item())*len(anchor)
+                epoch_loss += float(loss.item())*(len(anchor)/2)
                 loss.backward()
                 optimizer.step()
 
@@ -442,7 +442,7 @@ class Trainer_SN():
 
                 BCE_loss = BCELoss()
                 validation_loss = BCE_loss(output_val, target)                   
-                epoch_val_loss += validation_loss.item()*len(anchor)
+                epoch_val_loss += validation_loss.item()*(len(anchor)/2)
             
             epoch_val_loss /= len(self.v_set.dataset)
             print(f'val_loss: {epoch_val_loss}')

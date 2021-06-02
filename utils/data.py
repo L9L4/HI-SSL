@@ -1,4 +1,5 @@
 import os, torch, cv2, random, math, glob, numbers
+from copy import deepcopy
 from tqdm import tqdm
 import numpy as np
 from PIL import Image
@@ -43,6 +44,14 @@ def compute_mean_and_std(root, CHANNEL_NUM = 3, amount = 0.1, selection = False)
 		pkl.dump(stats, f) 
 
 	return rgb_mean, rgb_std
+
+def n_random_crops(img, x, y, h, w):
+
+	crops = []
+	for i in range(len(x)):
+		new_crop = img.crop((y[i], x[i], y[i] + w, x[i] + h))
+		crops.append(new_crop)
+	return tuple(crops)
 
 class Invert(object):
 
@@ -107,14 +116,6 @@ class NRandomCrop(object):
 
 	def __repr__(self):
 		return self.__class__.__name__ + '(size={0}, padding={1})'.format(self.size, self.padding)
-
-def n_random_crops(img, x, y, h, w):
-
-	crops = []
-	for i in range(len(x)):
-		new_crop = img.crop((y[i], x[i], y[i] + w, x[i] + h))
-		crops.append(new_crop)
-	return tuple(crops)
 
 class Standard_DataLoader():
 	
@@ -218,14 +219,14 @@ class Standard_DataLoader():
 
 class Dataset_Generator_SN(Dataset):
 	
-	def __init__(self, directory, transforms_params, train, mean, std, amount, selection):
+	def __init__(self, directory, transforms_params, phase = 'train', mean = [0, 0, 0], std = [1, 1, 1], amount = 0.3, selection = False):
 		super(Dataset_Generator_SN, self).__init__()
 		
 		self.directory = directory
 		self.transforms_params = transforms_params
-		self.train = train
+		self.phase = phase
 		
-		self.classes = os.listdir(self.directory)
+		self.classes = [class_ for class_ in os.listdir(self.directory) if os.path.isdir(os.path.join(self.directory, class_))]
 		self.num_classes = len(self.classes)
 
 		self.img_files = [glob.glob(os.path.join(self.directory,'*/*.png'))][0] + [glob.glob(os.path.join(self.directory,'*/*.jpg'))][0]
@@ -240,8 +241,14 @@ class Dataset_Generator_SN(Dataset):
 			self.std = std
 		
 		self.dict_classes = {}
+		self.weight_per_class = {}
 		for class_ in self.classes:
 			self.dict_classes[class_] = [glob.glob(os.path.join(self.directory, class_ + '/*.png'))][0] + [glob.glob(os.path.join(self.directory, class_ + '/*.jpg'))][0]
+			self.weight_per_class[class_] = float(self.num_elements)/float(len(self.dict_classes[class_]))
+
+		self.weight = [0]*len(self.img_files)
+		for idx, val in enumerate(self.img_files):
+			self.weight[idx] = self.weight_per_class[self.img_files[idx].split(os.path.sep)[-2]]
 
 	def compose_transform(self, 
 		img_crop_size = 380, 
@@ -254,7 +261,8 @@ class Dataset_Generator_SN(Dataset):
 		rand_eras = {'p': 0.5, 'scale': [0.02, 0.33], 'ratio': [0.3, 3.3], 'value': 0}, 
 		invert_p = 0.05,
 		gaussian_noise = {'mean': 0., 'std': 0.004},
-		gn_p = 0.0):
+		gn_p = 0.0,
+		n_test_crops = 10):
 		
 
 		randaffine['interpolation'] = randpersp['interpolation'] = T.InterpolationMode.BILINEAR
@@ -280,21 +288,20 @@ class Dataset_Generator_SN(Dataset):
 			T.Normalize(self.mean, self.std)
 			])
 		
-		if self.train == True:
-			return train_transforms			
-		else:
+		if self.phase == 'train':
+			return train_transforms
+		elif self.phase == 'val':
 			return val_transforms
 
 	def get_pn(self, index):
 		class_anchor = self.img_files[index].split(os.path.sep)[-2]
 		
 		list_positives = self.dict_classes[class_anchor]
-		list_negatives = []
-		for class_ in list(self.dict_classes.keys()):
-			if class_ != class_anchor:
-				list_negatives += self.dict_classes[class_]
-			else:
-				continue
+		
+		dict_negatives = deepcopy(self.dict_classes)
+		dict_negatives.pop(class_anchor)
+		
+		list_negatives = sum(dict_negatives.values(), [])
 
 		positive = random.choice(list_positives)
 		negative = random.choice(list_negatives)
@@ -317,10 +324,22 @@ class Dataset_Generator_SN(Dataset):
 
 class Data_Loader_SN():
 	
-	def __init__(self, directory, transforms_params, batch_size, train = True, mean = [0, 0, 0], std = [1, 1, 1], amount = 0.3, selection = False, shuffle = True):
-		self.dataset = Dataset_Generator_SN(directory, transforms_params, train, mean, std, amount, selection)
+	def __init__(self, directory, transforms_params, batch_size, weighted_sampling = True, phase = 'train', mean = [0, 0, 0], std = [1, 1, 1], amount = 0.3, selection = False, shuffle = True):
+		self.dataset = Dataset_Generator_SN(directory, transforms_params, phase, mean, std, amount, selection)
 		self.batch_size = batch_size
+		self.weighted_sampling = weighted_sampling
+		self.phase = phase
 		self.shuffle = shuffle
 
-	def load_data(self):		
-		return DataLoader(self.dataset, batch_size = self.batch_size, shuffle = self.shuffle)
+	def load_data(self):
+		if self.phase == 'train':
+			if self.weighted_sampling:
+				weights = self.dataset.weight
+				weights = torch.DoubleTensor(weights)
+				sampler = WeightedRandomSampler(weights, len(weights))
+				loader = DataLoader(self.dataset, batch_size = self.batch_size, sampler = sampler)
+			else:
+				loader = DataLoader(self.dataset, batch_size = self.batch_size, shuffle = self.shuffle)
+		else:
+			loader = DataLoader(self.dataset, batch_size = self.batch_size, shuffle = self.shuffle)
+		return loader

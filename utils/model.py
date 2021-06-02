@@ -133,8 +133,8 @@ class Model_SN(nn.Module):
         self.fc = nn.Linear(in_features = self.emb_width, out_features = 1)
 
     def forward(self, x1, x2):
-        x1 = self.fc_layers(self.enc(x1))
-        x2 = self.fc_layers(self.enc(x2))
+        x1 = F.normalize(self.fc_layers(self.enc(x1)), p = 2, dim = 1)
+        x2 = F.normalize(self.fc_layers(self.enc(x2)), p = 2, dim = 1)
         return torch.sigmoid(self.fc(torch.abs(x1 - x2)))
 
 class Model_MLC(nn.Module):
