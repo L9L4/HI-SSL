@@ -59,7 +59,8 @@ if __name__ == '__main__':
 	model_train, model_val = load_models(args.PATH, test_ID, test_type, model_pars, DEVICE)
 
 	print_losses(args.PATH, test_ID, test_type)
-	print_accs(args.PATH, test_ID, test_type)
+	if test_type == 'TL':
+		print_accs(args.PATH, test_ID, test_type)
 
 	f_a_train = feature_analysis(args.PATH, args.T_IM_DIR, args.T_IM_DIR, model_train, BATCH_SIZE, TRANSFORMS, DEVICE, test_ID, test_type, test_params, phase = 'train')
 	f_a_train()
