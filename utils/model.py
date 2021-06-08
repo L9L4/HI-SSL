@@ -68,14 +68,44 @@ def add_fc_layer(type_fc_layer, in_f, out_f):
     
     return fc_block        
 
+class Embedding_Sampler(nn.Module):
+    def __init__(self, samples: int = 1):
+        self.samples = samples
+        super().__init__()
+        
+    def sample_embeddings(self, input_):
+        batch_size, emb_width, dim1, dim2 = input_.shape
+
+        DEVICE = input_.device
+        
+        embeddings = input_.permute(0, 2, 3, 1)
+        embeddings = embeddings.reshape(batch_size*dim1*dim2, emb_width)
+        
+        probs = torch.ones((batch_size, dim1*dim2))
+        indices = torch.multinomial(probs, self.samples, replacement=False, out=None) + torch.arange(0,batch_size*dim1*dim2, dim1*dim2).unsqueeze(1)
+        indices = indices.view(-1).to(DEVICE)
+        
+        return torch.index_select(embeddings, 0, indices)
+    
+    def __call__(self, x):
+        return self.sample_embeddings(x)
+    
+    def string(self):
+        return f'Samples per batch of size "n": n*{self.samples}'
+
 class Model_TL(nn.Module):
-    def __init__(self, pretrained = None, mode = None, arch = 'resnet50', cp_path = './', emb_width = 512, num_fc_layers = 1, alpha = True, alpha_value = 1.0):
+    def __init__(self, pretrained = None, mode = None, arch = 'resnet50', cp_path = './', emb_width = 512, num_fc_layers = 1, alpha = True, alpha_value = 1.0, emb_type = 'avg', samples = 10):
         super().__init__()
         self.pretrained = pretrained
         self.mode = mode
         self.arch = arch
         self.cp_path = cp_path
         self.enc, self.num_words = load_model(self.pretrained, self.mode, self.cp_path, self.arch)
+        if emb_type == 'sampling':
+            self.enc = nn.Sequential(*(list(self.enc.children())[:-2]) + [Embedding_Sampler(samples)] + list(self.enc.children())[-1:])
+            if mode == 'freezed':
+                for param in self.enc.parameters():
+                    param.requires_grad = False
         self.emb_width = emb_width
         self.num_fc_layers = num_fc_layers
         self.fc_layers = nn.Sequential()
@@ -95,6 +125,8 @@ class Model_TL(nn.Module):
                                                    self.emb_width*(2**(self.num_fc_layers - layer - 1)))
                     self.fc_layers.add_module('fc' + str(layer), new_layer)
         self.alpha = nn.Parameter(torch.tensor(alpha_value, requires_grad=alpha))
+        self.emb_type = emb_type
+        self.samples = samples
                                        
     def forward(self, x):
         x = self.enc(x)

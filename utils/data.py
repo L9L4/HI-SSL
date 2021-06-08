@@ -45,6 +45,35 @@ def compute_mean_and_std(root, CHANNEL_NUM = 3, amount = 0.1, selection = False)
 
 	return rgb_mean, rgb_std
 
+def compute_min_page_size(root):
+
+	try:
+		sizes = []
+		with open(root + os.sep + 'crop_size.pkl', 'rb') as f:
+			sizes = pkl.load(f)
+		return sizes[0], sizes[1]
+	
+	except:
+		min_width = 10**6
+		min_height = 10**6
+		
+		classes = [class_ for class_ in os.listdir(root) if os.path.isdir(os.path.join(root, class_))]
+		
+		for class_ in classes:
+			sample_name = os.listdir(os.path.join(root, class_))[random.randint(0, len(os.listdir(os.path.join(root, class_))) - 1)]
+			sample = cv2.imread(os.path.join(os.path.join(root, class_), sample_name))
+			h, w, c = sample.shape
+			
+			min_width = min(min_width, w)
+			min_height = min(min_height, h)
+			
+		sizes = [min_height, min_width]
+		
+		with open(root + os.sep + 'crop_size.pkl', 'wb') as f:
+			pkl.dump(sizes, f)
+			
+		return min_height, min_width
+
 def n_random_crops(img, x, y, h, w):
 
 	crops = []
@@ -136,6 +165,8 @@ class Standard_DataLoader():
 			self.mean = mean
 			self.std = std
 
+		self.min_height, self.min_width = compute_min_page_size(self.directory)
+
 	def make_weights_for_balanced_classes(self, images, nclasses): # https://discuss.pytorch.org/t/balanced-sampling-between-classes-with-torchvision-dataloader/2703/3
 		count = [0] * nclasses                                                      
 		for item in images:
@@ -150,7 +181,8 @@ class Standard_DataLoader():
 		return weight    
 
 	def compose_transform(self, 
-		img_crop_size = 380, 
+		img_crop_size = 380,
+		rc_p = 1.0, 
 		cjitter = {'brightness': [0.4, 1.3], 'contrast': 0.6, 'saturation': 0.6,'hue': 0.4}, 
 		cjitter_p = 1, 
 		randaffine = {'degrees': [-10,10], 'translate': [0.2, 0.2], 'scale': [1.3, 1.4], 'shear': 1}, 
@@ -162,13 +194,15 @@ class Standard_DataLoader():
 		gaussian_noise = {'mean': 0., 'std': 0.004},
 		gn_p = 0.0,
 		n_test_crops = 10):
-		
+
+		assert ((1-rc_p)**2 + rc_p**2) == 1, "rc_p should be equal to 0.0 or 1.0"
 
 		randaffine['interpolation'] = randpersp['interpolation'] = T.InterpolationMode.BILINEAR
 		randaffine['fill'] = randpersp['fill'] = [255, 255, 255]
 
 		train_transforms = T.Compose([
-			T.RandomCrop(size = img_crop_size, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant'),
+			T.RandomApply(T.RandomCrop(size = img_crop_size, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant'), p = rc_p),
+			T.RandomApply([T.CenterCrop(size = (self.min_height, self.min_width))], p = 1 - rc_p),
 			T.RandomApply([T.ColorJitter(**cjitter)], p=cjitter_p),
 			T.RandomAffine(**randaffine),
 			T.RandomPerspective(**randpersp),
@@ -182,15 +216,23 @@ class Standard_DataLoader():
 			])	
 
 		val_transforms = T.Compose([
-			T.RandomCrop(size = img_crop_size, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant'),
+			T.RandomApply(T.RandomCrop(size = img_crop_size, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant'), p = rc_p),
+			T.RandomApply([T.CenterCrop(size = (self.min_height, self.min_width))], p = 1 - rc_p),
 			T.ToTensor(),
 			T.Normalize(self.mean, self.std)
 			])
 
-		test_transforms = T.Compose([
-			NRandomCrop(size = img_crop_size, n = n_test_crops, pad_if_needed = True),
-			T.Lambda(lambda crops: torch.stack([T.Normalize(self.mean, self.std)(T.ToTensor()(crop)) for crop in crops]))
-			])
+		if rc_p == 1:
+			test_transforms = T.Compose([
+				NRandomCrop(size = img_crop_size, n = n_test_crops, pad_if_needed = True),
+				T.Lambda(lambda crops: torch.stack([T.Normalize(self.mean, self.std)(T.ToTensor()(crop)) for crop in crops]))
+				])
+		else:
+			test_transforms = T.Compose([
+				T.CenterCrop(size = (self.min_height, self.min_width)),
+				T.ToTensor(),
+				T.Normalize(self.mean, self.std)
+				])
 		
 		if self.phase == 'train':
 			return train_transforms			

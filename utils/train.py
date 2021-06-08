@@ -253,21 +253,23 @@ class Trainer_TL():
 
     def get_all_embeddings(self, dataset, model):
         from pytorch_metric_learning import testers
-        tester = testers.BaseTester(dataloader_num_workers = 2)
+        tester = testers.BaseTester(dataloader_num_workers = 0)
         return tester.get_all_embeddings(dataset, model)
 
     def test(self, dataset, set_, model, accuracy_calculator):
-        embeddings, labels = self.get_all_embeddings(set_, model)          
-        labels = labels.squeeze()                   
-
-        print("Computing accuracy")
-        accuracies = accuracy_calculator.get_accuracy(embeddings, 
-                                                embeddings,
-                                                labels,
-                                                labels,
-                                                embeddings_come_from_same_source = True)
-        print(dataset + " set accuracy (Mean Average Precision) = {}".format(accuracies["mean_average_precision"]))
-        return accuracies["mean_average_precision"]
+        if model.emb_type == 'sampling':
+            return 0
+        else:
+            embeddings, labels = self.get_all_embeddings(set_, model)
+            labels = labels.squeeze()
+            print("Computing accuracy")
+            accuracies = accuracy_calculator.get_accuracy(embeddings,
+                                                    embeddings,
+                                                    labels, 
+                                                    labels,
+                                                    embeddings_come_from_same_source = True)
+            print(dataset + " set accuracy (Mean Average Precision) = {}".format(accuracies["mean_average_precision"]))
+            return accuracies["mean_average_precision"]
 
     def train_model(self):
     	loss_func, mining, accuracy_calculator = set_metric_learning_loss(self.optim_params, self.DEVICE)
@@ -292,16 +294,19 @@ class Trainer_TL():
     		epoch_loss = 0.0
     		for data, target in tqdm(self.t_dl, 'Training'):
     			data = data.to(self.DEVICE)
+    			if self.model.emb_type == 'sampling':
+    			    batch_size = len(data)
+    			    target = target.repeat(self.model.samples,1).t().reshape(batch_size*self.model.samples,1)
     			target = target.to(self.DEVICE)
     			optimizer.zero_grad()
     			output = self.model(data)
-
+                
     			if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
-    				indices_tuple = mining(output, target)
-    				loss = loss_func(output, target, indices_tuple)
-
+    			    indices_tuple = mining(output, target)
+    			    loss = loss_func(output, target, indices_tuple)
+                    
     			else:
-    				loss = loss_func(output, target)
+    			    loss = loss_func(output, target)
 
     			epoch_loss += float(loss.item())*len(data)
     			loss.backward()
@@ -319,9 +324,12 @@ class Trainer_TL():
     		self.model.eval()
     		for data, target in tqdm(self.v_dl, 'Validation'):
     			data = data.to(self.DEVICE)
+    			if self.model.emb_type == 'sampling':
+    			    batch_size = len(data)
+    			    target = target.repeat(self.model.samples,1).t().reshape(batch_size*self.model.samples,1)
     			target = target.to(self.DEVICE)
     			with torch.no_grad():
-    				output_val = self.model(data)
+    			    output_val = self.model(data)
 
     			if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
     				indices_tuple_val = mining(output_val, target)

@@ -102,10 +102,19 @@ class feature_analysis():
 
         for data, target in tqdm(set_):
             data = data.to(self.device)
-            bs, ncrops, c, h, w = data.size()
-            with torch.no_grad():
-                output = self.model(data.view(-1, c, h, w))
-                output = output.view(bs, ncrops, -1).mean(1) 
+            
+            if self.transforms['rc_p'] == 1.0:
+                bs, ncrops, c, h, w = data.size()
+                with torch.no_grad():
+                    output = self.model(data.view(-1, c, h, w))
+                    output = output.view(bs, ncrops, -1).mean(1)
+            else:
+                with torch.no_grad():
+                    output = self.model(data)
+                    if self.model.emb_type == 'sampling':
+                        bs = len(data)
+                        output = output.view(bs, self.model.samples, -1).mean(1) 
+                
                 output = output.cpu().detach().numpy()
             for item_ in range(output.shape[0]):
                 dict_aut[target[item_].item()].append(output[item_])

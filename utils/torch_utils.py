@@ -32,7 +32,7 @@ def load_models(root, test_ID, test_type, model_pars, device):
     val_cp = os.path.join(model_path, 'Prova_' + test_ID + '_' + test_type + '_validation_loss_best_model')
 
     if test_type == 'TL':
-        model = Model_TL(pretrained = model_pars['pretraining'], emb_width = model_pars['emb_width'], arch = model_pars['feature_extractor_arch'], cp_path = model_pars['cp_path'],  alpha = model_pars['alpha'], alpha_value = model_pars['alpha_value'])
+        model = Model_TL(pretrained = model_pars['pretraining'], emb_width = model_pars['emb_width'], arch = model_pars['feature_extractor_arch'], cp_path = model_pars['cp_path'],  alpha = model_pars['alpha'], alpha_value = model_pars['alpha_value'], emb_type = model_pars['emb_type'], samples = model_pars['samples'])
     elif test_type == 'SN':
         model = Model_SN(pretrained = model_pars['pretraining'], emb_width = model_pars['emb_width'], arch = model_pars['feature_extractor_arch'], cp_path = model_pars['cp_path'])
 
