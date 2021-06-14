@@ -16,6 +16,7 @@ import torchvision.transforms as T
 
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+import umap
 
 def print_losses(root, test_ID, test_type):
 
@@ -108,14 +109,17 @@ class feature_analysis():
                 with torch.no_grad():
                     output = self.model(data.view(-1, c, h, w))
                     output = output.view(bs, ncrops, -1).mean(1)
+                    output = output.cpu().detach().numpy()
             else:
                 with torch.no_grad():
                     output = self.model(data)
                     if self.model.emb_type == 'sampling':
                         bs = len(data)
-                        output = output.view(bs, self.model.samples, -1).mean(1) 
-                
-                output = output.cpu().detach().numpy()
+                        output = output.view(bs, self.model.samples, -1).mean(1)
+                        output = output.cpu().detach().numpy()
+                    else:
+                        output = output.cpu().detach().numpy()
+
             for item_ in range(output.shape[0]):
                 dict_aut[target[item_].item()].append(output[item_])
 
@@ -138,11 +142,23 @@ class feature_analysis():
         for i in range(len(df["Nome"])):
             cat_list.append(cat_dict[df["Nome"][i]])
 
+        embeddings_to_save = deepcopy(df)
+        embeddings_to_save.pop('Nome')
+        embeddings_to_save.to_csv(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_embeddings_' + self.phase + '.tsv', 
+            index=False, 
+            sep="\t", 
+            header = False)
+
+        labels = [str(value) for value in cat_list]
+        with open(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_metadata_' + self.phase + '.tsv', "w") as f:
+            for label in labels:
+                f.write("{}\n".format(label))
+
         return cat_list, df
 
     def produce_plots(self, df, cat_list, dim_red):
 
-        assert dim_red in ['PCA', 't-SNE'], 'Wrong dimensionality reduction technique; insert either "PCA" or "t-SNE"'
+        assert dim_red in ['PCA', 't-SNE', 'UMAP'], 'Wrong dimensionality reduction technique; insert either "PCA" or "t-SNE" or "UMAP"'
         
         df_values = df.drop(columns=['Nome'])
         x = df_values.values
@@ -152,6 +168,9 @@ class feature_analysis():
             x_red = pca.fit_transform(x)
         elif dim_red == 't-SNE':
             x_red = TSNE(n_components = 2).fit_transform(x)
+        elif dim_red == 'UMAP':
+            reducer = umap.UMAP()
+            x_red = reducer.fit_transform(x)
 
         principalDf = pd.DataFrame(data = x_red, columns = ['x1', 'x2'])
         principalDf.insert (0, 'Nome', df['Nome'])
@@ -233,7 +252,7 @@ class feature_analysis():
         
         cat_list, df = self.compute_features()
 
-        for dim_red in ['PCA', 't-SNE']:
+        for dim_red in ['PCA', 't-SNE', 'UMAP']:
             self.produce_plots(df, cat_list, dim_red)
 
         self.compute_mean_average_precision(df)

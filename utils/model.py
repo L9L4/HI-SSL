@@ -51,6 +51,10 @@ def load_model(pretrained, mode, cp_path, arch):
 			for param in encoder.parameters():
 				param.requires_grad = False
 
+    elif pretrained == 'imagenet':
+        encoder = models.__dict__[arch](pretrained=True)
+        n_classes = list(encoder.children())[-1].out_features
+        
 	elif pretrained == None:
 		encoder = models.__dict__[arch]()
 		n_classes = list(encoder.children())[-1].out_features
