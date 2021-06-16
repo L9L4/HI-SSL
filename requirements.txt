@@ -1,4 +1,5 @@
 # os, random, math, yaml, glob, pickle, copy, pathlib, cv2, sklearn
+# tensorflow==2.2.0
 numpy==1.19.5
 tqdm==4.44
 pandas==1.1.5
