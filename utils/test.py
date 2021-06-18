@@ -149,7 +149,7 @@ class feature_analysis():
             sep="\t", 
             header = False)
 
-        labels = [str(value) for value in cat_list]
+        labels = list(df['Nome'].values)
         with open(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_metadata_' + self.phase + '.tsv', "w") as f:
             for label in labels:
                 f.write("{}\n".format(label))
@@ -195,7 +195,7 @@ class feature_analysis():
         lp = lambda i: plt.plot([],color=sc.cmap(sc.norm(i)), ms=np.sqrt(size), mec='none',
             label = list(dict.fromkeys(list(principalDf['Nome'])))[i], ls='', marker='o')[0]
 
-        handles = [lp(i) for i in np.unique(principalDf['Categoria'])]
+        handles = [lp(i) for i in range(len(list(set(df['Categoria']))))]
         plt.legend(handles=handles)
 
         plt.scatter(centroids_x, centroids_y, c='black', s=50, marker='x')
