@@ -48,6 +48,7 @@ optim:
     power: 1
     ia_c_var_min: True
     iacvm_magnitude: 10
+  same_authors: False
 
 # Data parameters:
 data:

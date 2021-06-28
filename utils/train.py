@@ -256,20 +256,46 @@ class Trainer_TL():
         tester = testers.BaseTester(dataloader_num_workers = 0)
         return tester.get_all_embeddings(dataset, model)
 
-    def test(self, dataset, set_, model, accuracy_calculator):
+    def test(self, training_set, validation_set, model, accuracy_calculator, same_authors):
+        
         if model.emb_type == 'sampling':
             return 0
+        
         else:
-            embeddings, labels = self.get_all_embeddings(set_, model)
-            labels = labels.squeeze()
+            
+            embeddings_tr, labels_tr = self.get_all_embeddings(training_set, model)
+            labels_tr = labels_tr.squeeze()
             print("Computing accuracy")
-            accuracies = accuracy_calculator.get_accuracy(embeddings,
-                                                    embeddings,
-                                                    labels, 
-                                                    labels,
+            accuracies_tr = accuracy_calculator.get_accuracy(embeddings_tr,
+                                                    embeddings_tr,
+                                                    labels_tr, 
+                                                    labels_tr,
                                                     embeddings_come_from_same_source = True)
-            print(dataset + " set accuracy (Mean Average Precision) = {}".format(accuracies["mean_average_precision"]))
-            return accuracies["mean_average_precision"]
+
+            print("Training set accuracy (Mean Average Precision) = {}".format(accuracies_tr["mean_average_precision"]))
+            
+            embeddings_v, labels_v = self.get_all_embeddings(validation_set, model)
+            labels_v = labels_v.squeeze()
+
+            if same_authors:
+
+                accuracies_v = accuracy_calculator.get_accuracy(embeddings_v,
+                                                        embeddings_tr,
+                                                        labels_v,
+                                                        labels_tr,
+                                                        embeddings_come_from_same_source = False)
+                print("Validation set accuracy (Mean Average Precision) = {}".format(accuracies_v["mean_average_precision"]))
+            
+            else:
+
+                accuracies_v = accuracy_calculator.get_accuracy(embeddings_v,
+                                                        embeddings_v,
+                                                        labels_v,
+                                                        labels_v,
+                                                        embeddings_come_from_same_source = True)
+                print("Validation set accuracy (Mean Average Precision) = {}".format(accuracies_v["mean_average_precision"]))
+            
+            return accuracies_tr["mean_average_precision"], accuracies_v["mean_average_precision"]
 
     def train_model(self):
     	loss_func, mining, accuracy_calculator = set_metric_learning_loss(self.optim_params, self.DEVICE)
@@ -345,10 +371,10 @@ class Trainer_TL():
     		val_loss.append(epoch_val_loss)
 
     		min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'validation_loss')
-
-    		train_acc = self.test("Training", self.tds, self.model, accuracy_calculator)
+    		
+    		train_acc, val_acc = self.test(self.tds, self.vds, self.model, accuracy_calculator, self.optim_params['same_authors'])
+    		
     		train_accs.append(train_acc)
-    		val_acc = self.test("Validation", self.vds, self.model, accuracy_calculator)
     		val_accs.append(val_acc)
 
     		if self.optim_params['lr_schedule_type'] == 'red_on_plateau':
