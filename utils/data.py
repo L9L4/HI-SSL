@@ -201,7 +201,7 @@ class Standard_DataLoader():
 		randaffine['fill'] = randpersp['fill'] = [255, 255, 255]
 
 		train_transforms = T.Compose([
-			T.RandomApply(T.RandomCrop(size = img_crop_size, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant'), p = rc_p),
+			T.RandomApply([T.RandomCrop(size = img_crop_size, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant')], p = rc_p),
 			T.RandomApply([T.CenterCrop(size = (self.min_height, self.min_width))], p = 1 - rc_p),
 			T.RandomApply([T.ColorJitter(**cjitter)], p=cjitter_p),
 			T.RandomAffine(**randaffine),
