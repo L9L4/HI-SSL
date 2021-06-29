@@ -195,7 +195,7 @@ class feature_analysis():
         lp = lambda i: plt.plot([],color=sc.cmap(sc.norm(i)), ms=np.sqrt(size), mec='none',
             label = list(dict.fromkeys(list(principalDf['Nome'])))[i], ls='', marker='o')[0]
 
-        handles = [lp(i) for i in range(len(list(set(df['Categoria']))))]
+        handles = [lp(i) for i in range(len(list(set(principalDf['Categoria']))))]
         plt.legend(handles=handles)
 
         plt.scatter(centroids_x, centroids_y, c='black', s=50, marker='x')
