@@ -206,4 +206,5 @@ class Model_MLC(nn.Module):
     def forward(self, x):
         x = self.enc(x)
         x = self.fc_layers(x)        
-        return F.softmax(x,1)
+        # return F.softmax(x,1)
+        return x
