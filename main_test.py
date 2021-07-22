@@ -21,6 +21,11 @@ def get_args():
   	help = 'Validation image directory',
   	dest = 'V_IM_DIR',
   	default = './Sample_Validation/')
+  parser.add_argument('-ted', '--test_im_directory',
+  	type = str,
+  	help = 'Test image directory',
+  	dest = 'TE_IM_DIR',
+  	default = './Sample_Test/')	  
   parser.add_argument('-c', '--config',
   	type=str,
   	required=True,
@@ -46,7 +51,7 @@ if __name__ == '__main__':
 	TRANSFORMS = args.exp_config['data']['transforms']
 	test_params = args.exp_config['test']
 
-	assert test_type in ['TL', 'SN'], 'Set test type either to "TL" or "SN"'
+	assert test_type in ['MLC', 'TL', 'SN'], 'Set test type either to "MLC", "TL" or "SN"'
 
 	DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	
@@ -59,11 +64,20 @@ if __name__ == '__main__':
 	model_train, model_val = load_models(args.PATH, test_ID, test_type, model_pars, DEVICE)
 
 	print_losses(args.PATH, test_ID, test_type)
-	if test_type == 'TL':
+	if test_type in ['TL','MLC']:
 		print_accs(args.PATH, test_ID, test_type)
 
-	f_a_train = feature_analysis(args.PATH, args.T_IM_DIR, args.T_IM_DIR, model_train, BATCH_SIZE, TRANSFORMS, DEVICE, test_ID, test_type, test_params, phase = 'train')
-	f_a_train()
+	dir_ = {'train': args.T_IM_DIR, 'val': args.V_IM_DIR, 'test': args.TE_IM_DIR}
+	mod_ = {'train': model_train, 'val': model_val, 'test': model_val}
 
-	f_a_val = feature_analysis(args.PATH, args.T_IM_DIR, args.V_IM_DIR, model_val, BATCH_SIZE, TRANSFORMS, DEVICE, test_ID, test_type, test_params, phase = 'val')
-	f_a_val()		
+	if test_type in ['TL','SN']:
+		
+		for ph in ['train', 'val']:
+			f_a = feature_analysis(args.PATH, args.T_IM_DIR, dir_[ph], mod_[ph], BATCH_SIZE, TRANSFORMS, DEVICE, test_ID, test_type, test_params, phase = ph)
+			f_a()
+
+	else:
+		
+		for ph in ['train', 'val', 'test']:
+			mlca = mlc_accuracy(args.PATH, args.T_IM_DIR, dir_[ph], mod_[ph], TRANSFORMS, DEVICE, test_ID, test_type, phase = ph)
+			mlca()		

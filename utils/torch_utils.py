@@ -35,6 +35,8 @@ def load_models(root, test_ID, test_type, model_pars, device):
         model = Model_TL(pretrained = model_pars['pretraining'], emb_width = model_pars['emb_width'], arch = model_pars['feature_extractor_arch'], cp_path = model_pars['cp_path'],  alpha = model_pars['alpha'], alpha_value = model_pars['alpha_value'], emb_type = model_pars['emb_type'], samples = model_pars['samples'])
     elif test_type == 'SN':
         model = Model_SN(pretrained = model_pars['pretraining'], emb_width = model_pars['emb_width'], arch = model_pars['feature_extractor_arch'], cp_path = model_pars['cp_path'])
+    elif test_type == 'MLC':
+        model = Model_MLC(pretrained = model_pars['pretraining'], emb_width = model_pars['emb_width'], arch = model_pars['feature_extractor_arch'], cp_path = model_pars['cp_path'], num_classes = model_pars['num_classes'])
 
     model_train = model.to(device)
     model_val = deepcopy(model_train)
@@ -46,7 +48,7 @@ def load_models(root, test_ID, test_type, model_pars, device):
         model_train.load_state_dict(torch.load(train_cp, map_location=torch.device('cpu'))['model_state_dict'])
         model_val.load_state_dict(torch.load(val_cp, map_location=torch.device('cpu'))['model_state_dict'])
 
-    if test_type == 'TL':
+    if test_type in ['TL','MLC']:
         return model_train, model_val
     elif test_type == 'SN':
         return nn.Sequential(model_train.enc, model_train.fc_layers), nn.Sequential(model_val.enc, model_val.fc_layers)

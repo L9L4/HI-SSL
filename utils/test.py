@@ -1,6 +1,7 @@
 import os, torch
 t = torch
 import numpy as np
+import itertools
 import pickle as pkl
 from tqdm import tqdm
 import matplotlib.pyplot as plt 
@@ -16,6 +17,7 @@ import torchvision.transforms as T
 
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from sklearn.metrics import classification_report, confusion_matrix
 import umap
 
 def print_losses(root, test_ID, test_type):
@@ -28,7 +30,7 @@ def print_losses(root, test_ID, test_type):
             losses[loss] = pkl.load(f)
 
     with open(data_path + f'Prova_{test_ID}_{test_type}_losses.txt', 'w') as f:
-        f.write('The optimal value of loss for the background set is: {:01.3f}\n'.format(np.min(losses['train'])))
+        f.write('The optimal value of loss for the training set is: {:01.3f}\n'.format(np.min(losses['train'])))
         f.write('The optimal value of loss for the validation set is: {:01.3f}\n'.format(np.min(losses['val'])))
         best_epoch_train = np.where(np.array(losses['train']) == min(losses['train']))[0][0] + 1
         best_epoch = np.where(np.array(losses['val']) == min(losses['val']))[0][0] + 1
@@ -49,12 +51,21 @@ def print_accs(root, test_ID, test_type):
     data_path = root + os.sep + 'data/'
     accs = {'train': [], 'val': []}
 
+    if test_type == 'MLC':
+        metric = 'accuracy'
+        plot_title = 'Model Accuracy'
+        y_label = 'Accuracy [-]'
+    else:
+        metric = 'MAPs'
+        plot_title = 'Model MAP'
+        y_label = 'MAP [-]'
+
     for acc in list(accs.keys()):
-        with open(data_path + f'Prova_{test_ID}_{test_type}_{acc}_MAPs.pkl', 'rb') as f:
+        with open(data_path + f'Prova_{test_ID}_{test_type}_{acc}_{metric}.pkl', 'rb') as f:
             accs[acc] = pkl.load(f)
 
-    with open(data_path + f'Prova_{test_ID}_{test_type}_MAPs.txt', 'w') as f:
-        f.write('The optimal value of accuracy for the background set is: {:01.3f}\n'.format(np.max(accs['train'])))
+    with open(data_path + f'Prova_{test_ID}_{test_type}_{metric}.txt', 'w') as f:
+        f.write('The optimal value of accuracy for the training set is: {:01.3f}\n'.format(np.max(accs['train'])))
         f.write('The optimal value of accuracy for the validation set is: {:01.3f}\n'.format(np.max(accs['val'])))
         best_epoch_train = np.where(np.array(accs['train']) == max(accs['train']))[0][0] + 1
         best_epoch = np.where(np.array(accs['val']) == max(accs['val']))[0][0] + 1
@@ -63,11 +74,11 @@ def print_accs(root, test_ID, test_type):
 
     plt.plot(accs['train'])
     plt.plot(accs['val'])
-    plt.title('Model MAP')
-    plt.ylabel('MAP [-]')
+    plt.title(f'{plot_title}')
+    plt.ylabel(f'{y_label}')
     plt.xlabel('Epoch [-]')
     plt.legend(['Training', 'Validation'], loc='best')
-    plt.savefig(data_path + f'Prova_{test_ID}_{test_type}_MAPs.png')
+    plt.savefig(data_path + f'Prova_{test_ID}_{test_type}_{metric}.png')
     plt.close()  
 
 class feature_analysis():
@@ -256,3 +267,112 @@ class feature_analysis():
             self.produce_plots(df, cat_list, dim_red)
 
         self.compute_mean_average_precision(df)
+
+
+class mlc_accuracy():
+    
+    def __init__(self, root, train_dir, data_dir, model, transforms, device, test_ID, test_type, phase = 'train'):
+
+        self.data_path = root + os.sep + 'data/'
+        self.data_dir = data_dir
+        self.model = model
+        self.mean_, self.std_ = load_rgb_mean_std(train_dir)
+        self.transforms = transforms
+        self.device = device
+        self.test_ID = test_ID
+        self.test_type = test_type
+        self.phase = phase
+
+    def produce_output(self):
+        
+        self.model.eval()
+        
+        dl = Standard_DataLoader(self.data_dir, self.transforms, 32, False, 'test', self.mean_, self.std_, True)
+        dataset = dl.generate_dataset()
+        _, set_ = dl.load_data()
+
+        labels = []
+        preds = []
+        target_names = list(dataset.class_to_idx.keys())
+        c_to_idx = dataset.class_to_idx
+        idx_to_c = {c_to_idx[k]: k for k in list(c_to_idx.keys())}
+
+        for data, target in set_:
+            data = data.to(self.device)
+            labels += list(target.numpy())
+            target = target.to(self.device)
+            
+
+            with torch.no_grad():
+                output = self.model(data)
+                max_index = output.max(dim = 1)[1]
+                max_index = max_index.cpu().detach().numpy()
+                preds += list(max_index)
+
+        label_class_names = [idx_to_c[id_] for id_ in labels]
+        pred_class_names = [idx_to_c[id_] for id_ in preds]
+
+        return labels, preds, label_class_names, pred_class_names, target_names 
+
+    def plot_confusion_matrix(self, 
+                          lcn,
+                          pcn,
+                          tn,
+                          title='Confusion matrix',
+                          cmap=None,
+                          normalize=True):
+
+        cm = confusion_matrix(lcn, pcn, labels=tn)
+
+        accuracy = np.trace(cm) / float(np.sum(cm))
+        misclass = 1 - accuracy
+
+        if cmap is None:
+            cmap = plt.get_cmap('Blues')
+
+        plt.figure(figsize=(20, 20))
+        plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        plt.title(title)
+        plt.colorbar()
+
+        if target_names is not None:
+            tick_marks = np.arange(len(target_names))
+            plt.xticks(tick_marks, target_names, rotation=45)
+            plt.yticks(tick_marks, target_names)
+
+        if normalize:
+            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+
+        thresh = cm.max() / 1.5 if normalize else cm.max() / 2
+        for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+            if normalize:
+                plt.text(j, i, "{:0.2f}".format(cm[i, j]),
+                        horizontalalignment="center",
+                        color="white" if cm[i, j] > thresh else "black")
+            else:
+                plt.text(j, i, "{:,}".format(cm[i, j]),
+                        horizontalalignment="center",
+                        color="white" if cm[i, j] > thresh else "black")
+
+
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label\naccuracy = {:0.4f}; misclass = {:0.4f}'.format(accuracy, misclass))
+        plt.savefig(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_confusion_matrix_' + self.phase + '.png')
+
+    def produce_report(self, 
+                          lab,
+                          preds,
+                          tn):
+    
+        with open(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_classification-report_' + self.phase + '.txt', 'w') as f:
+            f.write(classification_report(lab, preds, target_names=tn))
+
+    def __call__(self):
+        
+        labels, preds, label_class_names, pred_class_names, target_names = self.produce_output()
+
+        self.plot_confusion_matrix(label_class_names, pred_class_names, target_names)
+
+        self.produce_report(labels, preds, target_names)
