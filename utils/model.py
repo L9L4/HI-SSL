@@ -59,6 +59,20 @@ def load_model(pretrained, mode, cp_path, arch):
 			for param in encoder.parameters():
 				param.requires_grad = False
 
+	elif pretrained == 'mlc':
+		cp = torch.load(cp_path)['model_state_dict']
+		cp_filtered = {}
+		for key in list(cp.keys()):
+			if key[:3] == 'enc':
+				cp_filtered[key[4:]] = cp[key]
+
+		n_classes = len(cp_filtered[list(cp_filtered.keys())[-1]])
+		encoder = models.__dict__[arch](num_classes = n_classes)
+		encoder.load_state_dict(cp_filtered)
+		if mode == 'freezed':
+			for param in encoder.parameters():
+				param.requires_grad = False
+
 	elif pretrained == None:
 		encoder = models.__dict__[arch]()
 		n_classes = list(encoder.children())[-1].out_features
