@@ -33,7 +33,7 @@ To train a model on the subset `./data_dir/train` while using `./data_dir/val` a
 python main.py -dir=./ -td=./data_dir/train -vd=./data_dir/val -c=config
 ```
 
-To compute the Mean Average Precision at k (MAP@k) and to plot the embeddings via PCA, t-SNE, and UMAP 2D projection for both the training (`./data_dir/train`) and the test set (`./data_dir/test`), according to the configuration file `./config/config.yaml`, run: 
+To compute the Mean Average Precision at k (MAP@k) and to plot the embeddings via PCA, t-SNE, and UMAP 2D projection for both the training `./data_dir/train` and the test set `./data_dir/test`, according to the configuration file `./config/config.yaml`, run: 
 
 ```
 python main_test.py -dir=./ -td=./data_dir/train -vd=./data_dir/test -c=config
