@@ -9,7 +9,7 @@ import pickle as pkl
 def make_dirs(path, id_):
     model_path = path + os.sep + 'model/'
     history_path = path + os.sep + 'data/'
-    new_directories = [model_path, model_path + '/checkpoints' + id_, history_path]
+    new_directories = [model_path, model_path + '/checkpoints_' + id_, history_path]
 
     for new_directory in new_directories:
         try:
@@ -21,15 +21,15 @@ def make_dirs(path, id_):
 
 def save_model(model_path, id_, type_, model):
     
-    with open(model_path + os.sep + 'Prova_' + id_ + '_' + type_ + '.txt','w+') as f:
+    with open(model_path + os.sep + 'Test_' + id_ + '_' + type_ + '.txt','w+') as f:
         for child in model.children():
             f.write(f'{child}\n')
 
 def load_models(root, test_ID, test_type, model_pars, device):
     
-    model_path = root + os.sep + 'model' + os.sep + 'checkpoints' + test_ID
-    train_cp = os.path.join(model_path, 'Prova_' + test_ID + '_' + test_type + '_training_loss_best_model')
-    val_cp = os.path.join(model_path, 'Prova_' + test_ID + '_' + test_type + '_validation_loss_best_model')
+    model_path = root + os.sep + 'model' + os.sep + 'checkpoints_' + test_ID
+    train_cp = os.path.join(model_path, 'Test_' + test_ID + '_' + test_type + '_train_best_model.pth')
+    val_cp = os.path.join(model_path, 'Test_' + test_ID + '_' + test_type + '_val_best_model.pth')
 
     if test_type == 'TL':
         model = Model_TL(pretrained = model_pars['pretraining'], emb_width = model_pars['emb_width'], arch = model_pars['feature_extractor_arch'], cp_path = model_pars['cp_path'],  alpha = model_pars['alpha'], alpha_value = model_pars['alpha_value'], emb_type = model_pars['emb_type'], samples = model_pars['samples'])

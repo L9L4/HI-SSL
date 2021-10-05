@@ -63,7 +63,7 @@ class save_results():
             torch.save({
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-                'loss': ep_loss}, self.checkpoint_path + os.sep + self.test_name + name + '_best_model')
+                'loss': ep_loss}, self.checkpoint_path + os.sep + self.test_name + name + '_best_model.pth')
             return ep_loss
         else:
             return min_loss
@@ -145,9 +145,9 @@ class Trainer_MLC():
         self.model_path = model_path
         self.history_path = history_path
         self.test_ID = test_ID
-        self.test_name = 'Prova_' + self.test_ID + '_MLC_'
+        self.test_name = 'Test_' + self.test_ID + '_MLC_'
         self.num_epochs = num_epochs
-        self.checkpoint_path = os.path.join(self.model_path, 'checkpoints' + self.test_ID)
+        self.checkpoint_path = os.path.join(self.model_path, 'checkpoints_' + self.test_ID)
 
     def compute_minibatch_accuracy(self, output, label):
         max_index = output.max(dim = 1)[1]
@@ -197,7 +197,7 @@ class Trainer_MLC():
             train_loss.append(epoch_loss)
             train_acc.append(epoch_acc)
 
-            min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'training_loss')
+            min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'train')
 
             epoch_val_loss = 0.0
             epoch_val_acc = 0
@@ -220,7 +220,7 @@ class Trainer_MLC():
             val_loss.append(epoch_val_loss)
             val_acc.append(epoch_val_acc)
             
-            min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'validation_loss')
+            min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'val')
 
             if self.optim_params['lr_schedule_type'] == 'red_on_plateau':
                 scheduler.step(epoch_val_loss)
@@ -247,9 +247,9 @@ class Trainer_TL():
         self.model_path = model_path
         self.history_path = history_path
         self.test_ID = test_ID
-        self.test_name = 'Prova_' + self.test_ID + '_TL_'
+        self.test_name = 'Test_' + self.test_ID + '_TL_'
         self.num_epochs = num_epochs
-        self.checkpoint_path = os.path.join(self.model_path, 'checkpoints' + self.test_ID)
+        self.checkpoint_path = os.path.join(self.model_path, 'checkpoints_' + self.test_ID)
 
     def get_all_embeddings(self, dataset, model):
         from pytorch_metric_learning import testers
@@ -343,7 +343,7 @@ class Trainer_TL():
     		print()
     		train_loss.append(epoch_loss)
 
-    		min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'training_loss')
+    		min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'train')
 
     		epoch_val_loss = 0.0
     		optimizer.zero_grad()
@@ -370,7 +370,7 @@ class Trainer_TL():
     		print()
     		val_loss.append(epoch_val_loss)
 
-    		min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'validation_loss')
+    		min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'val')
     		
     		train_acc, val_acc = self.test(self.tds, self.vds, self.model, accuracy_calculator, self.optim_params['same_authors'])
     		
@@ -404,9 +404,9 @@ class Trainer_SN():
         self.model_path = model_path
         self.history_path = history_path
         self.test_ID = test_ID
-        self.test_name = 'Prova_' + self.test_ID + '_SN_'
+        self.test_name = 'Test_' + self.test_ID + '_SN_'
         self.num_epochs = num_epochs
-        self.checkpoint_path = os.path.join(self.model_path, 'checkpoints' + self.test_ID)
+        self.checkpoint_path = os.path.join(self.model_path, 'checkpoints_' + self.test_ID)
 
     def train_model(self):
         
@@ -454,7 +454,7 @@ class Trainer_SN():
             print()
             train_loss.append(epoch_loss)
 
-            min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'training_loss')
+            min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'train')
 
             epoch_val_loss = 0.0
             optimizer.zero_grad()
@@ -483,7 +483,7 @@ class Trainer_SN():
             print()
             val_loss.append(epoch_val_loss)
 
-            min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'validation_loss')
+            min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'val')
 
             if self.optim_params['lr_schedule_type'] == 'red_on_plateau':
                 scheduler.step(epoch_val_loss)

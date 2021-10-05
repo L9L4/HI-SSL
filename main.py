@@ -18,12 +18,12 @@ def get_args():
   	type = str,
   	help = 'Training image directory',
   	dest = 'T_IM_DIR',
-  	default = './Sample_Training/')
+  	default = './Training/')
   parser.add_argument('-vd', '--v_im_directory',
   	type = str,
   	help = 'Validation image directory',
   	dest = 'V_IM_DIR',
-  	default = './Sample_Validation/')
+  	default = './Validation/')
   parser.add_argument('-c', '--config',
   	type=str,
   	required=True,

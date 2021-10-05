@@ -50,7 +50,7 @@ class TF_Embedding_Projector():
             w_loc = optimal_image_size*mod
             spriteimage.paste(image,(w_loc,h_loc))
 
-        spriteimage.convert('RGB').save(os.path.join(self.log_dir, f'Prova_{self.test_ID}_{self.test_type}_sprite_{self.phase}.jpg'), transparency=0)
+        spriteimage.convert('RGB').save(os.path.join(self.log_dir, f'Test_{self.test_ID}_{self.test_type}_sprite_{self.phase}.jpg'), transparency=0)
 
         print('Sprite image: done\n')
 
@@ -58,22 +58,22 @@ class TF_Embedding_Projector():
         
         emb = tf.Variable(x, name='embeddings')
         checkpoint = tf.train.Checkpoint(embedding=emb)
-        checkpoint.save(os.path.join(self.log_dir, f'Prova_{self.test_ID}_{self.test_type}_embedding_{self.phase}.ckpt'))
+        checkpoint.save(os.path.join(self.log_dir, f'Test_{self.test_ID}_{self.test_type}_embedding_{self.phase}.ckpt'))
 
         print('Embedding checkpoint: done\n')
 
         config = projector.ProjectorConfig()
         embedding = config.embeddings.add()
         embedding.tensor_name = 'embedding/.ATTRIBUTES/VARIABLE_VALUE'
-        embedding.metadata_path = f'Prova_{self.test_ID}_{self.test_type}_metadata_{self.phase}.tsv'
-        embedding.sprite.image_path = f'Prova_{self.test_ID}_{self.test_type}_sprite_{self.phase}.jpg'
+        embedding.metadata_path = f'Test_{self.test_ID}_{self.test_type}_metadata_{self.phase}.tsv'
+        embedding.sprite.image_path = f'Test_{self.test_ID}_{self.test_type}_sprite_{self.phase}.jpg'
         embedding.sprite.single_image_dim.extend([optimal_image_size, optimal_image_size])
         projector.visualize_embeddings(self.log_dir, config)
 
     def generate_proj_files(self):
 
-        path_to_embeddings = f'./Prova_{self.test_ID}_{self.test_type}_embeddings_{self.phase}.tsv'
-        path_to_metadata = f'./Prova_{self.test_ID}_{self.test_type}_metadata_{self.phase}.tsv'
+        path_to_embeddings = f'./Test_{self.test_ID}_{self.test_type}_embeddings_{self.phase}.tsv'
+        path_to_metadata = f'./Test_{self.test_ID}_{self.test_type}_metadata_{self.phase}.tsv'
 
         embeddings = pd.read_csv(path_to_embeddings, index_col = False, sep = '\t', header = None)
 
@@ -102,7 +102,7 @@ class TF_Embedding_Projector():
         y = embeddings['Nome'].values
         y = [str(value) for value in y]
 
-        with open(os.path.join(self.log_dir, f'Prova_{self.test_ID}_{self.test_type}_metadata_{self.phase}.tsv'), 'w') as f:
+        with open(os.path.join(self.log_dir, f'Test_{self.test_ID}_{self.test_type}_metadata_{self.phase}.tsv'), 'w') as f:
             for label in y:
                 f.write('{}\n'.format(label))
 

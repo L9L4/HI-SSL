@@ -8,12 +8,14 @@ def load_model(pretrained, mode, cp_path, arch):
 	
 	if pretrained == 'obow':
 		cp = torch.load(cp_path)['network']
-		n_classes = len(cp[list(cp.keys())[-1]])
-		encoder = models.__dict__[arch](num_classes = n_classes)
+		n_classes_0 = len(cp[list(cp.keys())[-1]])
+		encoder = models.__dict__[arch](num_classes = n_classes_0)
 		encoder.load_state_dict(cp)
 		if mode == 'freezed':
 			for param in encoder.parameters():
 				param.requires_grad = False
+		encoder = nn.Sequential(*(list(encoder.children())[:-1]))
+		n_classes = list(encoder.children())[-2][-1].conv2.out_channels
 
 	elif pretrained == 'moco':
 		cp = torch.load(cp_path)['state_dict']
@@ -53,11 +55,12 @@ def load_model(pretrained, mode, cp_path, arch):
 
 	elif pretrained == 'imagenet':
 		encoder = models.__dict__[arch](pretrained=True)
-		n_classes = list(encoder.children())[-1].out_features
         
 		if mode == 'freezed':
 			for param in encoder.parameters():
 				param.requires_grad = False
+		encoder = nn.Sequential(*(list(encoder.children())[:-1]))
+		n_classes = list(encoder.children())[-2][-1].conv2.out_channels
 
 	elif pretrained == 'mlc':
 		cp = torch.load(cp_path)['model_state_dict']
@@ -75,7 +78,8 @@ def load_model(pretrained, mode, cp_path, arch):
 
 	elif pretrained == None:
 		encoder = models.__dict__[arch]()
-		n_classes = list(encoder.children())[-1].out_features
+		encoder = nn.Sequential(*(list(encoder.children())[:-1]))
+		n_classes = list(encoder.children())[-2][-1].conv2.out_channels
 		
 	return encoder, n_classes
 
@@ -151,7 +155,7 @@ class Model_TL(nn.Module):
         self.samples = samples
                                        
     def forward(self, x):
-        x = self.enc(x)
+        x = self.enc(x).squeeze()
         x = self.fc_layers(x)
         x = F.normalize(x, p = 2, dim = 1)
         return self.alpha*x

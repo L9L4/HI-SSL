@@ -26,10 +26,10 @@ def print_losses(root, test_ID, test_type):
     losses = {'train': [], 'val': []}
 
     for loss in list(losses.keys()):
-        with open(data_path + f'Prova_{test_ID}_{test_type}_{loss}_losses.pkl', 'rb') as f:
+        with open(data_path + f'Test_{test_ID}_{test_type}_{loss}_losses.pkl', 'rb') as f:
             losses[loss] = pkl.load(f)
 
-    with open(data_path + f'Prova_{test_ID}_{test_type}_losses.txt', 'w') as f:
+    with open(data_path + f'Test_{test_ID}_{test_type}_losses.txt', 'w') as f:
         f.write('The optimal value of loss for the training set is: {:01.3f}\n'.format(np.min(losses['train'])))
         f.write('The optimal value of loss for the validation set is: {:01.3f}\n'.format(np.min(losses['val'])))
         best_epoch_train = np.where(np.array(losses['train']) == min(losses['train']))[0][0] + 1
@@ -43,7 +43,7 @@ def print_losses(root, test_ID, test_type):
     plt.ylabel('Loss [-]')
     plt.xlabel('Epoch [-]')
     plt.legend(['Training', 'Validation'], loc='best')
-    plt.savefig(data_path + f'Prova_{test_ID}_{test_type}_losses.png')
+    plt.savefig(data_path + f'Test_{test_ID}_{test_type}_losses.png')
     plt.close()
 
 def print_accs(root, test_ID, test_type):
@@ -61,10 +61,10 @@ def print_accs(root, test_ID, test_type):
         y_label = 'MAP [-]'
 
     for acc in list(accs.keys()):
-        with open(data_path + f'Prova_{test_ID}_{test_type}_{acc}_{metric}.pkl', 'rb') as f:
+        with open(data_path + f'Test_{test_ID}_{test_type}_{acc}_{metric}.pkl', 'rb') as f:
             accs[acc] = pkl.load(f)
 
-    with open(data_path + f'Prova_{test_ID}_{test_type}_{metric}.txt', 'w') as f:
+    with open(data_path + f'Test_{test_ID}_{test_type}_{metric}.txt', 'w') as f:
         f.write('The optimal value of accuracy for the training set is: {:01.3f}\n'.format(np.max(accs['train'])))
         f.write('The optimal value of accuracy for the validation set is: {:01.3f}\n'.format(np.max(accs['val'])))
         best_epoch_train = np.where(np.array(accs['train']) == max(accs['train']))[0][0] + 1
@@ -78,7 +78,7 @@ def print_accs(root, test_ID, test_type):
     plt.ylabel(f'{y_label}')
     plt.xlabel('Epoch [-]')
     plt.legend(['Training', 'Validation'], loc='best')
-    plt.savefig(data_path + f'Prova_{test_ID}_{test_type}_{metric}.png')
+    plt.savefig(data_path + f'Test_{test_ID}_{test_type}_{metric}.png')
     plt.close()  
 
 class feature_analysis():
@@ -155,13 +155,13 @@ class feature_analysis():
 
         embeddings_to_save = deepcopy(df)
         embeddings_to_save.pop('Nome')
-        embeddings_to_save.to_csv(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_embeddings_' + self.phase + '.tsv', 
+        embeddings_to_save.to_csv(self.data_path + os.sep + 'Test_' + self.test_ID + '_' + self.test_type + '_embeddings_' + self.phase + '.tsv', 
             index=False, 
             sep="\t", 
             header = False)
 
         labels = list(df['Nome'].values)
-        with open(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_metadata_' + self.phase + '.tsv', "w") as f:
+        with open(self.data_path + os.sep + 'Test_' + self.test_ID + '_' + self.test_type + '_metadata_' + self.phase + '.tsv', "w") as f:
             for label in labels:
                 f.write("{}\n".format(label))
 
@@ -198,26 +198,31 @@ class feature_analysis():
             centroids_x.append(p1)
             centroids_y.append(p2)
 
+        cmap_dict = {'train': 'twilight', 'val': 'viridis'}
+
         fig, ax = plt.subplots(figsize = (15,15))
         sc = plt.scatter(list(principalDf['x1']), list(principalDf['x2']), c = list(principalDf['Categoria']),
-            s = 50, cmap = 'hsv', edgecolors='none')
+            s = 50, cmap = cmap_dict[self.phase], edgecolors='none')
 
         size=81
         lp = lambda i: plt.plot([],color=sc.cmap(sc.norm(i)), ms=np.sqrt(size), mec='none',
             label = list(dict.fromkeys(list(principalDf['Nome'])))[i], ls='', marker='o')[0]
 
         handles = [lp(i) for i in range(len(list(set(principalDf['Categoria']))))]
-        plt.legend(handles=handles)
+        plt.legend(handles=handles, fontsize = 15, loc = 'best')
 
         plt.scatter(centroids_x, centroids_y, c='black', s=50, marker='x')
-        plt.xlabel('x1')
-        plt.ylabel('x2')
+        plt.xlabel('x1', fontsize = 20)
+        plt.ylabel('x2', fontsize = 20)
+
+        plt.xticks(fontsize = 20)
+        plt.yticks(fontsize = 20)
 
         for j in range(len(centroids_x)):
             ax.annotate(centroid_name[j], xy = (centroids_x[j], centroids_y[j]), xytext = (-5, 5),
-                textcoords = 'offset points',ha = 'right', va = 'bottom')
+                textcoords = 'offset points',ha = 'right', va = 'bottom', color = 'black', fontsize = 20)
 
-        plt.savefig(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_' + dim_red + '_' + self.phase + '.png')
+        plt.savefig(self.data_path + os.sep + 'Test_' + self.test_ID + '_' + self.test_type + '_' + dim_red + '_' + self.phase + '.png')
 
     def compute_mean_average_precision(self, df):
 
@@ -254,7 +259,7 @@ class feature_analysis():
         MAP = np.mean(APs)
         AP_per_class = {key: AP_per_class[key]/occurrencies[key] for key in list(AP_per_class.keys())}
 
-        with open(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_Mean_Average_Precision.txt', 'a') as f:
+        with open(self.data_path + os.sep + 'Test_' + self.test_ID + '_' + self.test_type + '_Mean_Average_Precision.txt', 'a') as f:
             f.write(f'Mean Average Precision ({RATIO*100} % of the {self.phase} set) = {round(MAP*100,2)} %\n\n')
             for key in list(occurrencies.keys()):
             	f.write(f'Class {key} MAP is {round(AP_per_class[key]*100,2)}, based on {occurrencies[key]} samples\n')
@@ -359,14 +364,14 @@ class mlc_accuracy():
         plt.tight_layout()
         plt.ylabel('True label')
         plt.xlabel('Predicted label\naccuracy = {:0.4f}; misclass = {:0.4f}'.format(accuracy, misclass))
-        plt.savefig(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_confusion_matrix_' + self.phase + '.png')
+        plt.savefig(self.data_path + os.sep + 'Test_' + self.test_ID + '_' + self.test_type + '_confusion_matrix_' + self.phase + '.png')
 
     def produce_report(self, 
                           lab,
                           preds,
                           tn):
     
-        with open(self.data_path + os.sep + 'Prova_' + self.test_ID + '_' + self.test_type + '_classification-report_' + self.phase + '.txt', 'w') as f:
+        with open(self.data_path + os.sep + 'Test_' + self.test_ID + '_' + self.test_type + '_classification-report_' + self.phase + '.txt', 'w') as f:
             f.write(classification_report(lab, preds, target_names=tn))
 
     def __call__(self):
