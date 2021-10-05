@@ -11,7 +11,7 @@ argparse==1.1
 pytorch-metric-learning
 faiss-gpu==1.7.0
 online_triplet_loss
-torchtext
+torchtext==0.9.1
 pytorch-lightning==1.2.8
 pytorch-lightning-bolts==0.3.2
 lightly==1.1.7
