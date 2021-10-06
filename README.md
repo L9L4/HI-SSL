@@ -4,6 +4,8 @@ This repository allows the user to solve the task of handwriting identification 
 [OBoW: Online Bag-of-Visual-Words Generation for Self-Supervised Learning](https://openaccess.thecvf.com/content/CVPR2021/papers/Gidaris_OBoW_Online_Bag-of-Visual-Words_Generation_for_Self-Supervised_Learning_CVPR_2021_paper.pdf) on a set of unlabeled manuscripts;
 * or fine-tuning a ResNet18 encoder pretrained on the ImageNet dataset;
 * or even training a ResNet18 completely from scratch.  
+
+Among the three different options, the first one - which relies on self-supervised pretraining - not only significantly outperforms the other two for the background set (consisting of authors or copyists used to fine-tune the model), but also shows higher generalization power, as confirmed by the performance on the evaluation set (consisting of authors never seen during the downstream task).
 ## Contents
 1. [Dataset](#dataset)
 2. [Installation](#installation)
@@ -21,7 +23,7 @@ The handwriting identification task was carried out on 24 manuscripts scraped at
 
 All the manuscripts underwent the following preprocessing stage:
 * the unnecessary pages (for example, unwritten pages, pages containing too many drawings, or pictures of the manuscript cover) were removed;
-* To prevent the unwritten borders of the pages from being included in the pipeline, each image was cropped to match a given size (constant across all the manuscript).
+* to prevent the unwritten borders of the pages from being included in the pipeline, each image was cropped to match a given size (constant across all the manuscript).
 <p align="center">
     <img src="./images/preprocessing.png" width="360">
 </p>
@@ -49,12 +51,12 @@ To launch both the processes one after the other, simply run the bash file `./ru
 bash run.sh
 ```
 ## Model weights
-The weights of the best model in terms of MAP@k for the evaluation set are available [here](./model/checkpoints_3/Test_3_TL_val_best_model.pth).
+The weights of the best model in terms of MAP@k for the never-seen copyists - obtained by fine-tuning a ResNet18 encoder pretrained with OBoW - are available [here](./model/checkpoints_3/Test_3_TL_val_best_model.pth).
 
 ## TensorFlow Embedding Projector
 After the `./main_test.py` has been executed, it is possible to visualize the embeddings via PCA, t-SNE, and UMAP 3D projections - together with the corresponding images - through the [Embedding Projector in TensorBoard](https://www.tensorflow.org/tensorboard/tensorboard_projector_plugin). The embedding projector is also available through the [dedicated script](./TensorFlow-Embedding-Projector.ipynb). 
 ### Usage
 To project the embeddings produced during the testing stage for the desired subset, move the corresponding embedding and metadata `.tsv` files (`./data/Test_{test-id}_TL_embeddings_{phase}.tsv` and `./data/Test_{test-id}_TL_metadata_{phase}.tsv`, where `test-id` and `phase` are the test name and the subset selected, respectively) to the root directory `./`. 
 
-Then, in the [.ipynb script](./TensorFlow-Embedding-Projector.ipynb) set the `test_` variable equal to the configuration file name, the `phase` variable to the subset name, and the `im_path` variable to the path containing the images of the selected subset.
+Then, in the [.ipynb script](./TensorFlow-Embedding-Projector.ipynb) set the `test_` variable equal to the configuration file name of the experiment, the `phase` variable to the subset name, and the `im_path` variable to the path containing the images of the selected subset.
 ## License
