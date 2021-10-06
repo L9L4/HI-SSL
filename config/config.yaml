@@ -1,61 +1,60 @@
 # General
 general:
-  test_id: "---"
-  test_type: TL
-  seed: 1
+  test_id: "---" # test name
+  test_type: TL # type of test to perform (either triplet loss minimization "TL", multi-label classification "MLC", or siamese networks "SN")
+  seed: 1 # global seed 
 
 # Model parameters.
 model:
-  feature_extractor_arch: "resnet18"
-  bow_extractor_opts:
-    num_words: 8192
-  num_classes: 24
-  emb_width: 512
-  pretraining: simclr
-  mode: freezed
-  cp_path: ../simclr/simclr_1/checkpoints-epoch=029-loss=1.042.ckpt
-  alpha: True
-  alpha_value: 1.0
-  emb_type: "avg" # ["average", "sampling"]
-  samples: 10
+  feature_extractor_arch: "resnet18" # backbone model architecture
+  num_classes: 23 # number of training classes
+  emb_width: 1024 # embedding width
+  pretraining: obow # pretraining type (either "obow", "moco", "simclr", "imagenet", "mlc", or None)
+  mode: freezed # set "freezed" to freeze the backbone model weights
+  cp_path: ./path-to-pretrained-model/pretrained-model.pth # insert the path to the pretrained encoder checkpoints (except for "imagenet" pretraining)
+  alpha: False # boolean parameter to add a trainable parameter "alpha" which regulates the embedding magnitude; if "False", the parameter is fixed to "alpha_value"
+  alpha_value: 1.0 # initial value of the alpha parameter
+  emb_type: "avg" # when adopting the fully convolutional network strategy, set to "avg" to produce a global embedding for the whole page, or "sampling" to sample "samples" embeddings
+  samples: 10 # number of samples to sample when "emb_type" is set to "sampling"
 
 # Optimization parameters.
 optim:
-  optim_type: "sgd"
+  optim_type: "sgd" # optimizer (either "sgd" or "adam")
+  # optimizer and scheduler parameters
   momentum: 0.9
   weight_decay: 0.0001
   nesterov: False
-  num_epochs: 30
+  num_epochs: 100 # number of epochs
   lr: 0.6
   beta: [0.9, 0.999]
   end_lr: 0.0015
-  lr_schedule_type: "cos_warmup"
+  lr_schedule_type: "cos_warmup" # scheduler type (either "cos_warmup", "step_lr", "exp", or "red_on_plateau")
   step: 10
   gamma: 0.1
   patience: 10
   warmup_epochs: 10
   warmup_start_lr: 0.15
-  alpha_min: 1.0
-  alpha_max: 5.0
+  alpha_min: 1.0 # minimum value of the alpha parameter
+  alpha_max: 5.0 # maximum value of the alpha parameter
   loss:
-    loss_type: bhtl 
+    loss_type: bhtl # set either to "bhtl" or "pml_bhtl" to choose the online-triplet-loss or the PyTorch-Metric-Learning (PML) implementation of the triplet margin loss
     margin: 0.2
     squared: False
     mining: hard
-    distance: LpDistance # [LpDistance, DotProductSimilarity]
-    normalize_embedding: True
+    distance: LpDistance # distance type - valid for PML implementation only ("LpDistance" or "DotProductSimilarity")
+    normalize_embedding: True # when "True", the embeddings are L2-normalized
     p: 2
     power: 1
-    ia_c_var_min: True
-    iacvm_magnitude: 10
+    ia_c_var_min: False # when "True", an intra-class variance minimization term is added to the loss
+    iacvm_magnitude: 10 # coefficient of the intra-class variance minimization term
   same_authors: False
 
 # Data parameters:
 data:
-  batch_size: 512
-  transforms:
+  batch_size: 256 # batch size
+  transforms: # torchvision.transforms parameters ---> https://pytorch.org/vision/stable/transforms.html
     img_crop_size: 380
-    rc_p: 1.0
+    rc_p: 1.0 # set either to 1 or 0 to select data augmentation scheme A or B respectively
     cjitter:
       'brightness': [0.4, 1.3]
       'contrast': 0.6 
@@ -85,9 +84,9 @@ data:
       'std': 0.004
     gn_p: 0.0
     n_test_crops: 10
-  weighted_sampling: True
+  weighted_sampling: False # when "True", a sampler is added to the dataloader aimed at tackling class imbalance
 
 # Test parameters
 test:
-  ratio_train: 20
-  ratio_val: 40
+  ratio_train: 50 # percentage of the background samples involved in the MAP computation
+  ratio_val: 100 # percentage of the evaluation samples involved in the MAP computation
