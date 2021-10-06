@@ -84,7 +84,7 @@ class TF_Embedding_Projector():
 
         root_rounded = int(np.ceil(np.sqrt(len(embeddings)))**2)
 
-        optimal_image_size = int(np.round(8192/np.sqrt(root_rounded),-1))
+        optimal_image_size = int(np.round(8192/np.sqrt(root_rounded))-1)
 
         print(f'Optimal shape to resize images for sprite image: {str(optimal_image_size)}x{str(optimal_image_size)}\n')
 
