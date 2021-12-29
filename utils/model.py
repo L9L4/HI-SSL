@@ -226,7 +226,7 @@ class Model_MLC(nn.Module):
             self.fc_layers.add_module('fc' + str(self.num_fc_layers), class_layer)
 
     def forward(self, x):
-        x = self.enc(x)
+        x = self.enc(x).squeeze()
         x = self.fc_layers(x)        
         # return F.softmax(x,1)
         return x
