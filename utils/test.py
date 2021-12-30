@@ -340,10 +340,10 @@ class mlc_accuracy():
         plt.title(title)
         plt.colorbar()
 
-        if target_names is not None:
-            tick_marks = np.arange(len(target_names))
-            plt.xticks(tick_marks, target_names, rotation=45)
-            plt.yticks(tick_marks, target_names)
+        if tn is not None:
+            tick_marks = np.arange(len(tn))
+            plt.xticks(tick_marks, tn, rotation=45)
+            plt.yticks(tick_marks, tn)
 
         if normalize:
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
