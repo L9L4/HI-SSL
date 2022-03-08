@@ -60,3 +60,17 @@ To project the embeddings produced during the testing stage for the desired subs
 
 Then, in the [.ipynb script](./TensorFlow-Embedding-Projector.ipynb) set the `test_` variable equal to the configuration file name of the experiment, the `phase` variable to the subset name, and the `im_path` variable to the path containing the images of the selected subset.
 ## License
+This repository includes the code used for the experiments presented in the following paper: 
+
+    @article{LASTILLA2022102875,
+        title = {{Self-supervised learning for medieval handwriting identification: A case study from the Vatican Apostolic Library}},
+        journal = {Information Processing \& Management},
+        volume = {59},
+        number = {3},
+        pages = {102875},
+        year = {2022},
+        issn = {0306-4573},
+        doi = {https://doi.org/10.1016/j.ipm.2022.102875},
+        url = {https://www.sciencedirect.com/science/article/pii/S0306457322000097},
+        author = {Lorenzo Lastilla and Serena Ammirati and Donatella Firmani and Nikos Komodakis and Paolo Merialdo and Simone Scardapane}
+    }
