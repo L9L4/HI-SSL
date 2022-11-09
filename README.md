@@ -50,6 +50,9 @@ To launch both the processes one after the other, simply run the bash file `./ru
 ```
 bash run.sh
 ```
+
+Alternatively, you can run the experiments through the [dedicated Jupyter notebook](./HI-SSL.ipynb).
+
 ## Model weights
 The weights of the best model in terms of MAP@k for the never-seen copyists - obtained by fine-tuning a ResNet18 encoder pretrained with OBoW - are available [here](./model/checkpoints_3/Test_3_TL_val_best_model.pth).
 
