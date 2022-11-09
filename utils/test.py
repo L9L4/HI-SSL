@@ -51,7 +51,7 @@ def print_accs(root, test_ID, test_type):
     data_path = root + os.sep + 'data/'
     accs = {'train': [], 'val': []}
 
-    if test_type == 'MLC':
+    if test_type == 'MCC':
         metric = 'accuracy'
         plot_title = 'Model Accuracy'
         y_label = 'Accuracy [-]'
@@ -262,7 +262,7 @@ class feature_analysis():
         with open(self.data_path + os.sep + 'Test_' + self.test_ID + '_' + self.test_type + '_Mean_Average_Precision.txt', 'a') as f:
             f.write(f'Mean Average Precision ({RATIO*100} % of the {self.phase} set) = {round(MAP*100,2)} %\n\n')
             for key in list(occurrencies.keys()):
-            	f.write(f'Class {key} MAP is {round(AP_per_class[key]*100,2)}, based on {occurrencies[key]} samples\n')
+                f.write(f'Class {key} MAP is {round(AP_per_class[key]*100,2)}, based on {occurrencies[key]} samples\n')
 
     def __call__(self):
         
@@ -274,7 +274,7 @@ class feature_analysis():
         self.compute_mean_average_precision(df)
 
 
-class mlc_accuracy():
+class mcc_accuracy():
     
     def __init__(self, root, train_dir, data_dir, model, transforms, device, test_ID, test_type, phase = 'train'):
 

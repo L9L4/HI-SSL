@@ -339,7 +339,7 @@ class Solver:
             self._best_model_meters = str(test_metric_logger)
             self.save_checkpoint(epoch+1, suffix=".best")
             if (self._best_epoch is not None):
-                self.delete_checkpoint(self.best_epoch+1, suffix=".best")
+                self.delete_checkpoint(self._best_epoch+1, suffix=".best")
             self._best_epoch = epoch
             logger.info(
                 f"==> Best results w.r.t. {self._best_metric_name}: "

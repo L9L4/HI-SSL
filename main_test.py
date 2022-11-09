@@ -50,8 +50,9 @@ if __name__ == '__main__':
 	BATCH_SIZE = args.exp_config['data']['batch_size']	
 	TRANSFORMS = args.exp_config['data']['transforms']
 	test_params = args.exp_config['test']
+	loss = args.exp_config['optim']['loss']['loss_type']
 
-	assert test_type in ['MLC', 'TL', 'SN'], 'Set test type either to "MLC", "TL" or "SN"'
+	assert test_type in ['MCC', 'TL', 'SN'], 'Set test type either to "MCC", "TL" or "SN"'
 
 	DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	
@@ -64,8 +65,11 @@ if __name__ == '__main__':
 	model_train, model_val = load_models(args.PATH, test_ID, test_type, model_pars, DEVICE)
 
 	print_losses(args.PATH, test_ID, test_type)
-	if test_type in ['TL','MLC']:
+	if test_type == 'MCC':
 		print_accs(args.PATH, test_ID, test_type)
+	elif test_type == 'TL':
+		if not loss == 'bhtl':
+			print_accs(args.PATH, test_ID, test_type)
 
 	dir_ = {'train': args.T_IM_DIR, 'val': args.V_IM_DIR, 'test': args.TE_IM_DIR}
 	mod_ = {'train': model_train, 'val': model_val, 'test': model_val}
@@ -79,5 +83,5 @@ if __name__ == '__main__':
 	else:
 		
 		for ph in ['train', 'val', 'test']:
-			mlca = mlc_accuracy(args.PATH, args.T_IM_DIR, dir_[ph], mod_[ph], TRANSFORMS, DEVICE, test_ID, test_type, phase = ph)
-			mlca()		
+			mcca = mcc_accuracy(args.PATH, args.T_IM_DIR, dir_[ph], mod_[ph], TRANSFORMS, DEVICE, test_ID, test_type, phase = ph)
+			mcca()		

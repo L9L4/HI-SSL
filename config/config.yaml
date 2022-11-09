@@ -1,7 +1,7 @@
 # General
 general:
   test_id: "---" # test name
-  test_type: TL # type of test to perform (either triplet loss minimization "TL", multi-label classification "MLC", or siamese networks "SN")
+  test_type: TL # type of test to perform (either triplet loss minimization "TL", multi-class classification "MCC", or siamese networks "SN")
   seed: 1 # global seed 
 
 # Model parameters.
@@ -9,8 +9,8 @@ model:
   feature_extractor_arch: "resnet18" # backbone model architecture
   num_classes: 23 # number of training classes
   emb_width: 1024 # embedding width
-  pretraining: obow # pretraining type (either "obow", "moco", "simclr", "imagenet", "mlc", or None)
-  mode: freezed # set "freezed" to freeze the backbone model weights
+  pretraining: obow # pretraining type (either "obow", "moco", "simclr", "imagenet", "mcc", or None)
+  mode: frozen # set "frozen" to freeze the backbone model weights
   cp_path: ./path-to-pretrained-model/pretrained-model.pth # insert the path to the pretrained encoder checkpoints (except for "imagenet" pretraining)
   alpha: False # boolean parameter to add a trainable parameter "alpha" which regulates the embedding magnitude; if "False", the parameter is fixed to "alpha_value"
   alpha_value: 1.0 # initial value of the alpha parameter

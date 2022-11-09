@@ -38,14 +38,13 @@ class IaCVM(object):
 # Batch Hard Triplet Loss (online_triplet_loss)
 class BHTL(object): 
 
-	def __init__(self, squared, margin, device):
+	def __init__(self, squared, margin):
 		self.squared = squared
 		self.margin = margin
-		self.device = device
 
 	def __call__(self, output, target):
 		from online_triplet_loss.losses import batch_hard_triplet_loss
-		loss = batch_hard_triplet_loss(target, output, squared = self.squared, margin = self.margin, device = self.device)
+		loss = batch_hard_triplet_loss(target, output, squared = self.squared, margin = self.margin)
 		return loss
 
 class save_results():
@@ -101,17 +100,17 @@ def set_scheduler(optim_params, optimizer):
         raise Exception('The selected scheduler type is not available.')
     return scheduler
 
-def set_metric_learning_loss(optim_params, device):
-	from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
-	
-	accuracy_calculator = AccuracyCalculator()
+def set_metric_learning_loss(optim_params):
 
 	if optim_params['loss']['loss_type'] == 'bhtl':
-		loss_func = BHTL(optim_params['loss']['squared'], optim_params['loss']['margin'], device)
+		loss_func = BHTL(optim_params['loss']['squared'], optim_params['loss']['margin'])
 		mining = None
+		accuracy_calculator = None
 	
 	elif optim_params['loss']['loss_type'].split('_')[0] == 'pml':
+		from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
 		from pytorch_metric_learning import losses, miners, distances, reducers
+		accuracy_calculator = AccuracyCalculator()
 		if optim_params['loss']['loss_type'] == 'pml_bhtl':
 			if optim_params['loss']['distance'] == 'LpDistance':
 				distance = distances.__dict__[optim_params['loss']['distance']](collect_stats = True, 
@@ -135,7 +134,7 @@ def set_metric_learning_loss(optim_params, device):
 
 	return loss_func, mining, accuracy_calculator
 
-class Trainer_MLC():
+class Trainer_MCC():
     def __init__(self, model, t_set, v_set, DEVICE, optim_params, model_path, history_path, test_ID, num_epochs = 300):
         self.model = model
         self.t_set = t_set
@@ -145,7 +144,7 @@ class Trainer_MLC():
         self.model_path = model_path
         self.history_path = history_path
         self.test_ID = test_ID
-        self.test_name = 'Test_' + self.test_ID + '_MLC_'
+        self.test_name = 'Test_' + self.test_ID + '_MCC_'
         self.num_epochs = num_epochs
         self.checkpoint_path = os.path.join(self.model_path, 'checkpoints_' + self.test_ID)
 
@@ -298,98 +297,99 @@ class Trainer_TL():
             return accuracies_tr["mean_average_precision"], accuracies_v["mean_average_precision"]
 
     def train_model(self):
-    	loss_func, mining, accuracy_calculator = set_metric_learning_loss(self.optim_params, self.DEVICE)
-
-    	optimizer = set_optimizer(self.optim_params, self.model)
-    	scheduler = set_scheduler(self.optim_params, optimizer)
-
-    	sr = save_results(self.history_path, self.checkpoint_path, self.test_name)
-
-    	self.model.train()
-
-    	train_loss = []
-    	val_loss = []
-    	train_accs = []
-    	val_accs = []
-    	min_loss_t = 1000.0
-    	min_loss_v = 1000.0
-
-    	for epoch in range(1, self.num_epochs + 1):
-    		print(f'Epoch {epoch} / {self.num_epochs}')
-    		self.model.train()
-    		epoch_loss = 0.0
-    		for data, target in tqdm(self.t_dl, 'Training'):
-    			data = data.to(self.DEVICE)
-    			if self.model.emb_type == 'sampling':
-    			    batch_size = len(data)
-    			    target = target.repeat(self.model.samples,1).t().reshape(batch_size*self.model.samples,1)
-    			target = target.to(self.DEVICE)
-    			optimizer.zero_grad()
-    			output = self.model(data)
+        loss_func, mining, accuracy_calculator = set_metric_learning_loss(self.optim_params)
+        
+        optimizer = set_optimizer(self.optim_params, self.model)
+        scheduler = set_scheduler(self.optim_params, optimizer)
+        
+        sr = save_results(self.history_path, self.checkpoint_path, self.test_name)
+        
+        self.model.train()
+        
+        train_loss = []
+        val_loss = []
+        train_accs = []
+        val_accs = []
+        min_loss_t = 1000.0
+        min_loss_v = 1000.0
+        
+        for epoch in range(1, self.num_epochs + 1):
+            print(f'Epoch {epoch} / {self.num_epochs}')
+            self.model.train()
+            epoch_loss = 0.0
+            for data, target in tqdm(self.t_dl, 'Training'):
+                data = data.to(self.DEVICE)
+                if self.model.emb_type == 'sampling':
+                    batch_size = len(data)
+                    target = target.repeat(self.model.samples,1).t().reshape(batch_size*self.model.samples,1)
+                target = target.to(self.DEVICE)
+                optimizer.zero_grad()
+                output = self.model(data)
                 
-    			if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
-    			    indices_tuple = mining(output, target)
-    			    loss = loss_func(output, target, indices_tuple)
+                if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
+                    indices_tuple = mining(output, target)
+                    loss = loss_func(output, target, indices_tuple)
                     
-    			else:
-    			    loss = loss_func(output, target)
+                else:
+                    loss = loss_func(output, target)
 
-    			epoch_loss += float(loss.item())*len(data)
-    			loss.backward()
-    			optimizer.step()
+                epoch_loss += float(loss.item())*len(data)
+                loss.backward()
+                optimizer.step()
 
-    		epoch_loss /= len(self.t_dl.dataset)
-    		print(f'train_loss: {epoch_loss}')
-    		print()
-    		train_loss.append(epoch_loss)
+            epoch_loss /= len(self.t_dl.dataset)
+            print(f'train_loss: {epoch_loss}')
+            print()
+            train_loss.append(epoch_loss)
 
-    		min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'train')
+            min_loss_t = sr.save_checkpoints(epoch_loss, min_loss_t, self.model, optimizer, 'train')
 
-    		epoch_val_loss = 0.0
-    		optimizer.zero_grad()
-    		self.model.eval()
-    		for data, target in tqdm(self.v_dl, 'Validation'):
-    			data = data.to(self.DEVICE)
-    			if self.model.emb_type == 'sampling':
-    			    batch_size = len(data)
-    			    target = target.repeat(self.model.samples,1).t().reshape(batch_size*self.model.samples,1)
-    			target = target.to(self.DEVICE)
-    			with torch.no_grad():
-    			    output_val = self.model(data)
+            epoch_val_loss = 0.0
+            optimizer.zero_grad()
+            self.model.eval()
+            for data, target in tqdm(self.v_dl, 'Validation'):
+                data = data.to(self.DEVICE)
+                if self.model.emb_type == 'sampling':
+                    batch_size = len(data)
+                    target = target.repeat(self.model.samples,1).t().reshape(batch_size*self.model.samples,1)
+                target = target.to(self.DEVICE)
+                with torch.no_grad():
+                    output_val = self.model(data)
 
-    			if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
-    				indices_tuple_val = mining(output_val, target)
-    				validation_loss = loss_func(output_val, target, indices_tuple_val)
-    			else:
-    				validation_loss = loss_func(output_val, target)
+                if self.optim_params['loss']['loss_type'].split('_')[0] == 'pml':
+                    indices_tuple_val = mining(output_val, target)
+                    validation_loss = loss_func(output_val, target, indices_tuple_val)
+                else:
+                    validation_loss = loss_func(output_val, target)
 
-    			epoch_val_loss += validation_loss.item()*len(data)
+                epoch_val_loss += validation_loss.item()*len(data)
 
-    		epoch_val_loss /= len(self.v_dl.dataset)
-    		print(f'val_loss: {epoch_val_loss}')
-    		print()
-    		val_loss.append(epoch_val_loss)
+            epoch_val_loss /= len(self.v_dl.dataset)
+            print(f'val_loss: {epoch_val_loss}')
+            print()
+            val_loss.append(epoch_val_loss)
 
-    		min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'val')
-    		
-    		train_acc, val_acc = self.test(self.tds, self.vds, self.model, accuracy_calculator, self.optim_params['same_authors'])
-    		
-    		train_accs.append(train_acc)
-    		val_accs.append(val_acc)
+            min_loss_v = sr.save_checkpoints(epoch_val_loss, min_loss_v, self.model, optimizer, 'val')
+            
+            if not accuracy_calculator == None:
+                train_acc, val_acc = self.test(self.tds, self.vds, self.model, accuracy_calculator, self.optim_params['same_authors'])
+                train_accs.append(train_acc)
+                val_accs.append(val_acc)
 
-    		if self.optim_params['lr_schedule_type'] == 'red_on_plateau':
-    			scheduler.step(epoch_val_loss)
-    		else:
-    			scheduler.step()
+                sr.save_pkl('train_MAPs', train_accs)
+                sr.save_pkl('val_MAPs', val_accs)
 
-    		with torch.no_grad():
-    			if self.model.alpha < 1.0:
-    				self.model.alpha.clamp_(self.optim_params['alpha_min'], self.optim_params['alpha_max'])
+            if self.optim_params['lr_schedule_type'] == 'red_on_plateau':
+                scheduler.step(epoch_val_loss)
+            else:
+                scheduler.step()
 
-    		sr.save_pkl('train_losses', train_loss)
-    		sr.save_pkl('val_losses', val_loss)
-    		sr.save_pkl('train_MAPs', train_accs)
-    		sr.save_pkl('val_MAPs', val_accs)
+            with torch.no_grad():
+                if self.model.alpha < 1.0:
+                    self.model.alpha.clamp_(self.optim_params['alpha_min'], self.optim_params['alpha_max'])
+
+            sr.save_pkl('train_losses', train_loss)
+            sr.save_pkl('val_losses', val_loss)
 
     def __call__(self):
         self.train_model()

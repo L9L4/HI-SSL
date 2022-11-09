@@ -35,7 +35,7 @@ def get_args():
   full_config_path = pathlib.Path(args.PATH) / 'config' / (args.config + '.yaml')
   print(f'Loading experiment {full_config_path}')
   with open(full_config_path, 'r') as f:
-  	args.exp_config = yaml.load(f, Loader=yaml.SafeLoader)
+    args.exp_config = yaml.load(f, Loader=yaml.SafeLoader)
   return args
 
 if __name__ == '__main__':
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 	WS = args.exp_config['data']['weighted_sampling']
 	SEED = args.exp_config['general']['seed']
 
-	assert test_type in ['MLC', 'TL', 'SN'], 'Set test type either to "MLC", "TL" or "SN"'
+	assert test_type in ['MCC', 'TL', 'SN'], 'Set test type either to "MCC", "TL" or "SN"'
 
 	history_path, model_path = make_dirs(args.PATH, test_ID)
 
@@ -71,18 +71,18 @@ if __name__ == '__main__':
 
 	mean_, std_ = load_rgb_mean_std(args.T_IM_DIR)
 
-	if test_type in ['MLC', 'TL']:
+	if test_type in ['MCC', 'TL']:
 		t_ds = Standard_DataLoader(args.T_IM_DIR, TRANSFORMS, BATCH_SIZE, WS, 'train', mean_, std_, True)
 		v_ds = Standard_DataLoader(args.V_IM_DIR, TRANSFORMS, BATCH_SIZE, False, 'val', mean_, std_, True)
 		tds, t_dl = t_ds.load_data()
 		vds, v_dl = v_ds.load_data()
 		pl.seed_everything(SEED)
-		if test_type == 'MLC':
+		if test_type == 'MCC':
 			assert NUM_CLASSES == len(t_dl.dataset.classes), f'Wrong number of classes: ({len(t_dl.dataset.classes)} classes in dataset).\n'
-			model = Model_MLC(pretrained = PRETRAINING, mode = MODE, emb_width = EMB_WIDTH, arch = ARCH, cp_path = CP_PATH, num_classes = NUM_CLASSES)
+			model = Model_MCC(pretrained = PRETRAINING, mode = MODE, emb_width = EMB_WIDTH, arch = ARCH, cp_path = CP_PATH, num_classes = NUM_CLASSES)
 			model = model.to(DEVICE)
 			save_model(model_path, test_ID, test_type, model)
-			trainer = Trainer_MLC(model, t_dl, v_dl, DEVICE, OPTIM, model_path, history_path, test_ID, EPOCHS)
+			trainer = Trainer_MCC(model, t_dl, v_dl, DEVICE, OPTIM, model_path, history_path, test_ID, EPOCHS)
 			trainer()
 		else:
 			model = Model_TL(pretrained = PRETRAINING, mode = MODE, emb_width = EMB_WIDTH, arch = ARCH, cp_path = CP_PATH, alpha = ALPHA, alpha_value = ALPHA_VALUE, emb_type = EMB_TYPE, samples = SAMPLES)

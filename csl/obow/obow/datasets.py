@@ -104,11 +104,11 @@ class ParallelTransforms:
         self.img_size = img_size
 
     def __call__(self, x):
-    	if self.overlap:
-    		crop = T.RandomCrop(size = self.img_size, padding=None, pad_if_needed=True, fill = (255, 255, 255), padding_mode='constant')
-    		x = crop(x)
-    	return [transform(x) for transform in self.transform_list]
-
+        if self.overlap:
+            crop = T.RandomCrop(size = self.img_size, padding=None, pad_if_needed=True, fill = (255, 255, 255), padding_mode='constant')
+            x = crop(x)
+        return [transform(x) for transform in self.transform_list]
+        
     def __str__(self):
         str_transforms = f"ParallelTransforms(["
         for i, transform in enumerate(self.transform_list):
@@ -151,8 +151,8 @@ class GaussianBlur(object):
 class Invert(object):
 
     def __call__(self, x):
-    	x = F.invert(x)
-    	return x
+        x = F.invert(x)
+        return x
 
     def __str__(self):
         str_transforms = f"Invert RGB channels"
@@ -339,6 +339,108 @@ def get_data_for_obow(
     print(f"Image transforms during testing: {transform_test}")
 
     print("Loading data.")
+    dataset_train = torchvision.datasets.ImageFolder(
+        os.path.join(data_dir, 'train'), transform=transform_train)
+    dataset_test = torchvision.datasets.ImageFolder(
+        os.path.join(data_dir, 'val'), transform=transform_test)
+
+    if (subset is not None) and (subset >= 1):
+        dataset_train = subset_of_ImageNet_train_split(dataset_train, subset)
+
+    return dataset_train, dataset_test
+
+def show_data_for_obow(
+    data_dir,
+    subset=None,
+    cjitter=[(0.4, 1.3), 0.6, 0.6, 0.4],
+    cjitter_p=1,
+    randaffine = [10, (0.2, 0.2), (1.3, 1.4), 1],
+    randpersp = [0.1, 0.2],
+    gray_p=0.2,
+    gaussian_blur=[3, (0.1, 0.5)],
+    gaussian_blur_p=0.5,
+    target_img_size = 224,
+    num_img_crops=2,
+    image_crop_size=270,
+    image_crop_range=[0.08, 0.6],
+    num_img_patches=0,
+    img_patch_preresize=256,
+    img_patch_preresize_range=[0.6, 1.0],
+    img_patch_size=150,
+    img_patch_jitter=24,
+    only_patches=False,
+    rand_eras = [0.5, (0.02, 0.33), (0.3, 3.3), 0],
+    rand_eras_patch = [0.7, (0.02, 0.1), (0.3, 3.3), 0],
+    invert_p = 0.05,
+    overlap = True,
+    overlap_area_size = 256,
+    mean_gn = 0.0,
+    std_gn = 0.004,
+    gn_p = 0.0):
+
+    mean_, std_ = [0,0,0], [1,1,1]
+    
+    normalize = T.Normalize(mean=mean_, std=std_)
+    randaffine += [T.InterpolationMode.BILINEAR, [255, 255, 255]]
+    randpersp += [T.InterpolationMode.BILINEAR, [255, 255, 255]]
+
+    image_crops_transform = T.Compose([
+    	T.RandomCrop(size = image_crop_size, padding = None, pad_if_needed = False, fill = (255, 255, 255), padding_mode = 'constant'), 
+        T.RandomApply([T.ColorJitter(*cjitter)], p=cjitter_p),
+        T.RandomAffine(*randaffine), 
+        T.RandomPerspective(*randpersp),
+        T.GaussianBlur(*gaussian_blur), 
+        T.RandomGrayscale(gray_p),
+        T.ToTensor(),
+        T.RandomErasing(*rand_eras),
+        T.RandomApply([Invert()], p=invert_p),
+        normalize,
+        T.RandomApply([AddGaussianNoise(mean_gn, std_gn)], p=gn_p), 
+    ])
+
+    image_crops_transform = StackMultipleViews(
+        image_crops_transform, num_views=num_img_crops)
+
+    transform_original_train = T.Compose([
+        T.RandomCrop(size = target_img_size, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant'), 
+        T.ToTensor(),
+        normalize,
+    ])
+    transform_train = [transform_original_train, image_crops_transform]
+
+    if num_img_patches > 0:
+        assert num_img_patches <= 9
+        image_patch_transform = T.Compose([
+        	T.RandomCrop(size = img_patch_preresize, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant'), 
+        	T.RandomApply([T.ColorJitter(*cjitter)], p=cjitter_p),
+        	T.RandomAffine(*randaffine), 
+        	T.RandomPerspective(*randpersp),
+        	T.GaussianBlur(*gaussian_blur), 
+        	T.RandomGrayscale(gray_p),
+        	T.ToTensor(),
+        	T.RandomErasing(*rand_eras_patch),
+        	T.RandomErasing(*rand_eras_patch),
+        	T.RandomApply([Invert()], p=invert_p),
+        	normalize,
+            T.RandomApply([AddGaussianNoise(mean_gn, std_gn)], p=gn_p), 
+            CropImagePatches(
+                patch_size=img_patch_size, patch_jitter=img_patch_jitter,
+                num_patches=num_img_patches, split_per_side=3),
+        ])
+        if only_patches:
+            transform_train[-1] = image_patch_transform
+        else:
+            transform_train.append(image_patch_transform)
+
+    transform_train = ParallelTransforms(transform_train, overlap, overlap_area_size)
+
+    transform_original = T.Compose([
+        T.RandomCrop(size = target_img_size, padding = None, pad_if_needed = True, fill = (255, 255, 255), padding_mode = 'constant'),
+        T.ToTensor(),
+        normalize,
+    ])
+    transform_test = ParallelTransforms([transform_original,], False, overlap_area_size)
+    
     dataset_train = torchvision.datasets.ImageFolder(
         os.path.join(data_dir, 'train'), transform=transform_train)
     dataset_test = torchvision.datasets.ImageFolder(

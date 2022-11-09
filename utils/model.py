@@ -11,7 +11,7 @@ def load_model(pretrained, mode, cp_path, arch):
 		n_classes_0 = len(cp[list(cp.keys())[-1]])
 		encoder = models.__dict__[arch](num_classes = n_classes_0)
 		encoder.load_state_dict(cp)
-		if mode == 'freezed':
+		if mode == 'frozen':
 			for param in encoder.parameters():
 				param.requires_grad = False
 		encoder = nn.Sequential(*(list(encoder.children())[:-1]))
@@ -34,7 +34,7 @@ def load_model(pretrained, mode, cp_path, arch):
 
 		encoder.load_state_dict(moco_filtered)
 
-		if mode == 'freezed':
+		if mode == 'frozen':
 			for param in encoder.parameters():
 				param.requires_grad = False
 
@@ -49,20 +49,20 @@ def load_model(pretrained, mode, cp_path, arch):
 
 		encoder.load_state_dict(simclr_filtered)
 
-		if mode == 'freezed':
+		if mode == 'frozen':
 			for param in encoder.parameters():
 				param.requires_grad = False
 
 	elif pretrained == 'imagenet':
 		encoder = models.__dict__[arch](pretrained=True)
         
-		if mode == 'freezed':
+		if mode == 'frozen':
 			for param in encoder.parameters():
 				param.requires_grad = False
 		encoder = nn.Sequential(*(list(encoder.children())[:-1]))
 		n_classes = list(encoder.children())[-2][-1].conv2.out_channels
 
-	elif pretrained == 'mlc':
+	elif pretrained == 'mcc':
 		cp = torch.load(cp_path)['model_state_dict']
 		cp_filtered = {}
 		for key in list(cp.keys()):
@@ -72,7 +72,7 @@ def load_model(pretrained, mode, cp_path, arch):
 		n_classes = len(cp_filtered[list(cp_filtered.keys())[-1]])
 		encoder = models.__dict__[arch](num_classes = n_classes)
 		encoder.load_state_dict(cp_filtered)
-		if mode == 'freezed':
+		if mode == 'frozen':
 			for param in encoder.parameters():
 				param.requires_grad = False
 
@@ -129,7 +129,7 @@ class Model_TL(nn.Module):
         self.enc, self.num_words = load_model(self.pretrained, self.mode, self.cp_path, self.arch)
         if emb_type == 'sampling':
             self.enc = nn.Sequential(*(list(self.enc.children())[:-2]) + [Embedding_Sampler(samples)] + list(self.enc.children())[-1:])
-            if mode == 'freezed':
+            if mode == 'frozen':
                 for param in self.enc.parameters():
                     param.requires_grad = False
         self.emb_width = emb_width
@@ -195,7 +195,7 @@ class Model_SN(nn.Module):
         x2 = F.normalize(self.fc_layers(self.enc(x2)), p = 2, dim = 1)
         return torch.sigmoid(self.fc(torch.abs(x1 - x2)))
 
-class Model_MLC(nn.Module):
+class Model_MCC(nn.Module):
     def __init__(self, pretrained = None, mode = None, arch = 'resnet50', cp_path = './', emb_width = 512, num_fc_layers = 1, num_classes = 8):
         super().__init__()
         self.pretrained = pretrained

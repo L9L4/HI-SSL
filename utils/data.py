@@ -85,8 +85,8 @@ def n_random_crops(img, x, y, h, w):
 class Invert(object):
 
     def __call__(self, x):
-    	x = F.invert(x)
-    	return x
+        x = F.invert(x)
+        return x
 
     def __str__(self):
         str_transforms = f"Invert RGB channels"

@@ -29,6 +29,7 @@ optim:
   lr_schedule_type: "cos_warmup"
   warmup_epochs: 5
   permanent: 100 # save a permanent checkpoint every 100 epochs.
+  best_metric_name:
 
 # Data parameters:
 data:
